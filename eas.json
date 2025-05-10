@@ -1,0 +1,70 @@
+{
+  "build": {
+    "release": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "channel": "release"
+    },
+    "preview": {
+      "android": {
+        "buildType": "apk"
+      },
+      "channel": "preview"
+    },
+    "preview2": {
+      "android": {
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "channel": "preview2"
+    },
+    "preview3": {
+      "developmentClient": true,
+      "channel": "preview3"
+    },
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production": {
+      "channel": "production"
+    },
+    "preview-apk": {
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease",
+        "withoutCredentials": true
+      },
+      "env": {
+        "EXPO_NO_DOTENV": "1"
+      }
+    },
+    "development-build": {
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug",
+        "developmentClient": true
+      },
+      "env": {
+        "EXPO_NO_DOTENV": "1",
+        "NODE_ENV": "development"
+      }
+    },
+    "fast-build": {
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease",
+        "cache": {
+          "key": "gradle-v1"
+        }
+      },
+      "env": {
+        "EXPO_NO_DOTENV": "1",
+        "ANDROID_NDK_HOME": "/opt/android-ndk"
+      }
+    }
+  }
+}

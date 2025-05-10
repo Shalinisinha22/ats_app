@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "EmpQuick",
+    "slug": "empquick",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1dbf73"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "INTERNET",
+        "INTERNET"
+      ],
+      "package": "com.raja7252725272528752.apps",
+      "runtimeVersion": "1.0.0"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "owner": "shalinisinha21",
+    "extra": {
+      "eas": {
+        "projectId": "6c97dc2e-6b30-462f-b7ea-58c73598fceb"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/ce9baffd-b755-4d11-ab2f-fe6ab81caafe"
+    }
+  }
+}
