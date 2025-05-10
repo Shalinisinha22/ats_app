@@ -33,7 +33,7 @@ const filterJobs = (jobs: Job[], filters: JobFilters) => {
       job.location.toLowerCase() === filters.location.toLowerCase();
 
     const matchesCategory = !filters.category || 
-      job.category.toLowerCase() === filters.category.toLowerCase();
+      job.title.toLowerCase() === filters.category.toLowerCase();
 
     return matchesSearch && matchesLocation && matchesCategory;
   });
@@ -74,7 +74,7 @@ export default function BrowseJobsScreen() {
   };
 
   const getUniqueCategories = (jobs: Job[]) => {
-    return Array.from(new Set(jobs.map(job => job.category)));
+    return Array.from(new Set(jobs.map(job => job.title)));
   };
 
   // Use mockJobs as fallback if API fails or returns empty
@@ -161,6 +161,7 @@ export default function BrowseJobsScreen() {
       <TextInput
           style={styles.searchInput}
           placeholder="Search jobs..."
+         placeholderTextColor="#666"
           value={filters.search}
           onChangeText={handleSearch}
         />

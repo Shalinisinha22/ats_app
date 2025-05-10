@@ -428,6 +428,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
     backgroundColor: "#f8f9fa",
     fontSize: isSmallDevice ? 14 : 16,
+    color: "black",
   },
   buttonContainer: {
     gap: 10,

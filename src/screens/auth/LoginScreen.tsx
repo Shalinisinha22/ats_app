@@ -136,7 +136,7 @@ export default function LoginScreen({ navigation }: Props) {
                     value={value}
                     keyboardType="email-address"
                     autoCapitalize="none"
-                    placeholderTextColor="#666"
+                  placeholderTextColor="#666"
                   />
 
                   {errors.email && (
@@ -298,6 +298,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
     backgroundColor: "#f8f9fa",
     fontSize: isSmallDevice ? 14 : 16,
+    color: "black",
   },
   buttonContainer: {
     gap: 10,

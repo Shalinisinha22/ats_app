@@ -14,7 +14,7 @@ import {
   Image,
 } from 'react-native';
 import { useAppSelector, useAppDispatch } from '../../redux/store';
-import { logout, updateProfile,fetchUserProfile } from '../../redux/authSlice';
+import { logout, updateProfile, fetchUserProfile } from '../../redux/authSlice';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
@@ -47,8 +47,6 @@ const EDUCATION_OPTIONS = [
   'Other',
 ];
 
-
-
 const ProfileScreen = () => {
   const dispatch = useAppDispatch();
 
@@ -63,9 +61,6 @@ const ProfileScreen = () => {
     }
   }, [dispatch, user, userProfile]);
 
- 
-
-
   const [expandedSection, setExpandedSection] = useState<Section | null>(null);
   const [editingSection, setEditingSection] = useState<Section | null>(null);
   const [animations] = useState({
@@ -76,7 +71,7 @@ const ProfileScreen = () => {
     skills: new Animated.Value(0),
     resume: new Animated.Value(0),
   });
-  const [profileImage, setProfileImage] = useState(user?.profileImage || null);
+  const [profileImage, setProfileImage] = useState(userProfile?.image?.url || null);
   const [educationEntries, setEducationEntries] = useState<EducationEntry[]>(
     userProfile?.education || []
   );
@@ -84,8 +79,6 @@ const ProfileScreen = () => {
     userProfile?.experience || []
   );
   const [isAnimating, setIsAnimating] = useState(false);
-
- 
 
   const [formData, setFormData] = useState({
     fullName: user?.name || '',
@@ -105,8 +98,6 @@ const ProfileScreen = () => {
     skills: userProfile?.skills?.join(', ') || '',
   });
 
-
-  
   useEffect(() => {
     if (userProfile) {
       setFormData({
@@ -168,9 +159,6 @@ const ProfileScreen = () => {
     }
   };
 
-
-  
-
   const toggleEdit = (section: Section) => {
     if (editingSection === section) {
       setEditingSection(null);
@@ -224,19 +212,22 @@ const ProfileScreen = () => {
           Alert.alert('Error', 'File size must be less than 5MB');
           return;
         }
+
+        // Extract file extension
+        const extension = fileInfo.name.split('.').pop() || 'pdf';
         
+        // Update profile with resume in required format
         await dispatch(updateProfile({
           ...user,
           resume: {
+            url: fileInfo.uri,
             name: fileInfo.name,
-            uri: fileInfo.uri,
-            type: fileInfo.mimeType || 'application/pdf',
-            size: fileInfo.size || 0,
-          },
-        }));
+            extension: extension
+          }
+        })).unwrap();
+        
         Alert.alert('Success', 'Resume uploaded successfully');
       }
-
     } catch (error) {
       Alert.alert('Error', 'Failed to upload resume');
     }
@@ -284,13 +275,20 @@ const ProfileScreen = () => {
 
       if (!result.canceled) {
         const imageUri = result.assets[0].uri;
+        const fileName = imageUri.split('/').pop() || 'image';
+        const extension = fileName.split('.').pop() || 'jpg';
+        
         setProfileImage(imageUri);
         
-        // Update profile with new image
+        // Update profile with new image in required format
         try {
           await dispatch(updateProfile({
             ...user,
-            profileImage: imageUri,
+            image: {
+              url: imageUri,
+              name: fileName,
+              extension: extension
+            }
           })).unwrap();
           Alert.alert('Success', 'Profile image updated successfully');
         } catch (error) {
@@ -444,6 +442,7 @@ const ProfileScreen = () => {
             style={styles.input}
             value={entry.degree}
             onChangeText={(text) => updateEducationEntry(entry.id, 'degree', text)}
+             placeholderTextColor="#666"
             placeholder="Degree/Certification"
             editable={editingSection === 'education'}
           />
@@ -452,6 +451,7 @@ const ProfileScreen = () => {
             style={styles.input}
             value={entry.institution}
             onChangeText={(text) => updateEducationEntry(entry.id, 'institution', text)}
+             placeholderTextColor="#666"
             placeholder="Institution Name"
             editable={editingSection === 'education'}
           />
@@ -461,6 +461,7 @@ const ProfileScreen = () => {
               style={[styles.input, styles.dateInput]}
               value={entry.startDate}
               onChangeText={(text) => updateEducationEntry(entry.id, 'startDate', text)}
+               placeholderTextColor="#666"
               placeholder="Start Date"
               editable={editingSection === 'education'}
             />
@@ -468,6 +469,7 @@ const ProfileScreen = () => {
               style={[styles.input, styles.dateInput]}
               value={entry.endDate}
               onChangeText={(text) => updateEducationEntry(entry.id, 'endDate', text)}
+               placeholderTextColor="#666"
               placeholder="End Date"
               editable={editingSection === 'education'}
             />
@@ -504,6 +506,7 @@ const ProfileScreen = () => {
             style={styles.input}
             value={entry.companyName}
             onChangeText={(text) => updateExperienceEntry(entry.id, 'companyName', text)}
+             placeholderTextColor="#666"
             placeholder="Company Name"
             editable={editingSection === 'education'}
           />
@@ -512,6 +515,7 @@ const ProfileScreen = () => {
             style={styles.input}
             value={entry.jobTitle}
             onChangeText={(text) => updateExperienceEntry(entry.id, 'jobTitle', text)}
+             placeholderTextColor="#666"
             placeholder="Job Title"
             editable={editingSection === 'education'}
           />
@@ -521,6 +525,7 @@ const ProfileScreen = () => {
               style={[styles.input, styles.dateInput]}
               value={entry.startDate}
               onChangeText={(text) => updateExperienceEntry(entry.id, 'startDate', text)}
+               placeholderTextColor="#666"
               placeholder="Start Date"
               editable={editingSection === 'education'}
             />
@@ -528,6 +533,7 @@ const ProfileScreen = () => {
               style={[styles.input, styles.dateInput]}
               value={entry.endDate}
               onChangeText={(text) => updateExperienceEntry(entry.id, 'endDate', text)}
+               placeholderTextColor="#666"
               placeholder="End Date"
               editable={editingSection === 'education'}
             />
@@ -537,6 +543,7 @@ const ProfileScreen = () => {
             style={[styles.input, styles.textArea]}
             value={entry.description}
             onChangeText={(text) => updateExperienceEntry(entry.id, 'description', text)}
+             placeholderTextColor="#666"
             placeholder="Job Description"
             multiline
             numberOfLines={4}
@@ -564,9 +571,6 @@ const ProfileScreen = () => {
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.contentContainer}
     >
-    
-
-   
       <View style={styles.header}>
         <View style={styles.avatarContainer}>
           <TouchableOpacity 
@@ -595,13 +599,14 @@ const ProfileScreen = () => {
 
       {renderSection('Basic Information', 'basic', (
         <View>
-          <Text style={styles.label}>Full Name</Text>
+          <Text style={styles.label}>Full Name (Non-editable)</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, styles.disabledInput]}
             value={user.name}
             onChangeText={(text) => setFormData({ ...formData, fullName: text })}
             // editable={editingSection === 'basic'}
             editable={false}
+             placeholderTextColor="#666"
             placeholder="Enter your full name"
           />
 
@@ -612,13 +617,13 @@ const ProfileScreen = () => {
             editable={false}
           />
 
-
           <Text style={styles.label}>Professional Headline</Text>
           <TextInput
             style={styles.input}
             value={formData.headline}
             onChangeText={(text) => setFormData({ ...formData, headline: text })}
             editable={editingSection === 'basic'}
+             placeholderTextColor="#666"
             placeholder="e.g., Senior Software Engineer"
           />
 
@@ -630,6 +635,7 @@ const ProfileScreen = () => {
             editable={editingSection === 'basic'}
             multiline
             numberOfLines={4}
+           placeholderTextColor="#666"
             placeholder="Write a brief summary of your professional background"
           />
         </View>
@@ -637,13 +643,14 @@ const ProfileScreen = () => {
 
       {renderSection('Contact Details', 'contact', (
         <View>
-          <Text style={styles.label}>Phone Number</Text>
+          <Text style={styles.label}>Phone Number (Non-editable)</Text>
           <TextInput
-            style={styles.input}
+              style={[styles.input, styles.disabledInput]}
             value={formData.mobileNumber}
             onChangeText={(text) => setFormData({ ...formData, mobileNumber: text })}
             // editable={editingSection === 'contact'}
             editable={false}
+             placeholderTextColor="#666"
             placeholder="Enter your phone number"
             keyboardType="phone-pad"
           />
@@ -654,6 +661,7 @@ const ProfileScreen = () => {
             value={formData.currentLocation}
             onChangeText={(text) => setFormData({ ...formData, currentLocation: text })}
             editable={editingSection === 'contact'}
+             placeholderTextColor="#666"
             placeholder="City, State"
           />
 
@@ -663,6 +671,7 @@ const ProfileScreen = () => {
             value={formData.preferredWorkLocation}
             onChangeText={(text) => setFormData({ ...formData, preferredWorkLocation: text })}
             editable={editingSection === 'contact'}
+             placeholderTextColor="#666"
             placeholder="Enter preferred job location"
           />
         </View>
@@ -681,6 +690,7 @@ const ProfileScreen = () => {
             onChangeText={(text) => setFormData({ ...formData, noticePeriod: text })}
             editable={editingSection === 'preferences'}
             keyboardType="numeric"
+             placeholderTextColor="#666"
             placeholder="Enter notice period"
           />
 
@@ -691,6 +701,7 @@ const ProfileScreen = () => {
             onChangeText={(text) => setFormData({ ...formData, currentCTC: text })}
             editable={editingSection === 'preferences'}
             keyboardType="numeric"
+             placeholderTextColor="#666"
             placeholder="Enter current CTC"
           />
 
@@ -701,6 +712,7 @@ const ProfileScreen = () => {
             onChangeText={(text) => setFormData({ ...formData, expectedCTC: text })}
             editable={editingSection === 'preferences'}
             keyboardType="numeric"
+             placeholderTextColor="#666"
             placeholder="Enter expected CTC"
           />
 
@@ -712,6 +724,7 @@ const ProfileScreen = () => {
             editable={editingSection === 'preferences'}
             multiline
             numberOfLines={4}
+             placeholderTextColor="#666"
             placeholder="Enter your reason for job change"
           />
         </View>
@@ -719,10 +732,10 @@ const ProfileScreen = () => {
 
       {renderSection('Resume', 'resume', (
         <View>
-          {user.resume ? (
+          {userProfile?.resume ? (
             <View style={styles.resumeInfo}>
               <Ionicons name="document" size={24} color="#1dbf73" />
-              <Text style={styles.resumeText}>{user.resume.name}</Text>
+              <Text style={styles.resumeText}>{userProfile?.resume .name}</Text>
             </View>
           ) : (
             <Text style={styles.noResumeText}>No resume uploaded</Text>
@@ -733,7 +746,7 @@ const ProfileScreen = () => {
             onPress={handlePickResume}
           >
             <Text style={styles.uploadButtonText}>
-              {user.resume ? 'Update Resume' : 'Upload Resume'}
+              {userProfile?.resume ? 'Update Resume' : 'Upload Resume'}
             </Text>
             <Text style={styles.uploadSubtext}>
               PDF/DOC/DOCX — Max: 5MB
@@ -752,6 +765,7 @@ const ProfileScreen = () => {
             editable={editingSection === 'skills'}
             multiline
             numberOfLines={4}
+             placeholderTextColor="#666"
             placeholder="Enter your skills (e.g., JavaScript, React Native, TypeScript)"
           />
         </View>
@@ -844,6 +858,7 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 20,
     color: '#fff',
+    // color: 'rgba(255, 255, 255, 0.9)',
     fontWeight: 'bold',
     marginTop: 5,
     textAlign: 'center',

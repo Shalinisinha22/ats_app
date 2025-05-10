@@ -81,7 +81,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
   const { user } = useAppSelector((state) => state.auth);
   const userProfile = useAppSelector((state: RootState) => state.auth.userProfile);
 
-  console.log(userProfile, 'userProfilejob application');
+  // console.log(userProfile, 'userProfilejob application');
   const dispatch = useAppDispatch();
   const {
     control,
@@ -333,6 +333,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={styles.input}
+                   placeholderTextColor="#666"
                   placeholder="Email"
                   value={formValues.email}
                   onChangeText={onChange}
@@ -347,6 +348,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={styles.input}
+                   placeholderTextColor="#666"
                   placeholder="Full Name"
                   value={formValues.fullname}
                   onChangeText={onChange}
@@ -360,6 +362,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={styles.input}
+                   placeholderTextColor="#666"
                   placeholder="Professional Headline"
                   value={formValues.headline}
                   onChangeText={onChange}
@@ -373,6 +376,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={[styles.input, styles.textArea]}
+                   placeholderTextColor="#666"
                   placeholder="Professional Summary"
                   value={formValues.summary}
                   onChangeText={onChange}
@@ -395,6 +399,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={styles.input}
+                   placeholderTextColor="#666"
                   placeholder="Phone Number"
                   value={formValues.phone}
                   onChangeText={(text) => {
@@ -414,6 +419,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={styles.input}
+                   placeholderTextColor="#666"
                   placeholder="Current Location (City, State)"
                   value={formValues.currentLocation}
                   onChangeText={(text) => {
@@ -430,6 +436,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={styles.input}
+                   placeholderTextColor="#666"
                   placeholder="Preferred Work Location"
                   value={formValues.preferredWorkLocation}
                   onChangeText={(text) => {
@@ -465,6 +472,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                   value={entry.degree}
                   onChangeText={(text) => updateEducationEntry(entry.id, 'degree', text)}
                   placeholder="Degree/Certification"
+                   placeholderTextColor="#666"
                 />
 
                 <TextInput
@@ -472,6 +480,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                   value={entry.institution}
                   onChangeText={(text) => updateEducationEntry(entry.id, 'institution', text)}
                   placeholder="Institution Name"
+                   placeholderTextColor="#666"
                 />
 
                 <View style={styles.dateContainer}>
@@ -480,12 +489,14 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                     value={entry.startDate}
                     onChangeText={(text) => updateEducationEntry(entry.id, 'startDate', text)}
                     placeholder="Start Date"
+                     placeholderTextColor="#666"
                   />
                   <TextInput
                     style={[styles.input, styles.dateInput]}
                     value={entry.endDate}
                     onChangeText={(text) => updateEducationEntry(entry.id, 'endDate', text)}
                     placeholder="End Date"
+                     placeholderTextColor="#666"
                   />
                 </View>
               </View>
@@ -515,6 +526,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                   value={entry.companyName}
                   onChangeText={(text) => updateExperienceEntry(entry.id, 'companyName', text)}
                   placeholder="Company Name"
+                   placeholderTextColor="#666"
                 />
 
                 <TextInput
@@ -522,6 +534,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                   value={entry.jobTitle}
                   onChangeText={(text) => updateExperienceEntry(entry.id, 'jobTitle', text)}
                   placeholder="Job Title"
+                   placeholderTextColor="#666"
                 />
 
                 <View style={styles.dateContainer}>
@@ -530,12 +543,14 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                     value={entry.startDate}
                     onChangeText={(text) => updateExperienceEntry(entry.id, 'startDate', text)}
                     placeholder="Start Date"
+                     placeholderTextColor="#666"
                   />
                   <TextInput
                     style={[styles.input, styles.dateInput]}
                     value={entry.endDate}
                     onChangeText={(text) => updateExperienceEntry(entry.id, 'endDate', text)}
                     placeholder="End Date"
+                     placeholderTextColor="#666"
                   />
                 </View>
 
@@ -544,6 +559,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                   value={entry.description}
                   onChangeText={(text) => updateExperienceEntry(entry.id, 'description', text)}
                   placeholder="Job Description"
+                   placeholderTextColor="#666"
                   multiline
                   numberOfLines={4}
                 />
@@ -568,6 +584,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                 <TextInput
                   style={styles.input}
                   placeholder="Notice Period (in days)"
+                   placeholderTextColor="#666"
                   value={formValues.noticePeriod}
                   onChangeText={onChange}
                   keyboardType="numeric"
@@ -581,6 +598,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={styles.input}
+                   placeholderTextColor="#666"
                   placeholder="Current CTC (₹ LPA)"
                   value={formValues.currentCTC}
                   onChangeText={onChange}
@@ -596,6 +614,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                 <TextInput
                   style={styles.input}
                   placeholder="Expected CTC (₹ LPA)"
+                   placeholderTextColor="#666"
                   value={formValues.expectedCTC}
                   onChangeText={onChange}
                   keyboardType="numeric"
@@ -610,6 +629,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   placeholder="Reason for Job Change"
+                   placeholderTextColor="#666"
                   value={formValues.reasonForJobChange}
                   onChangeText={onChange}
                   multiline
@@ -639,6 +659,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={[styles.input, styles.textArea]}
+                   placeholderTextColor="#666"
                   placeholder="Your Response"
                   value={formValues.projectDescription}
                   onChangeText={onChange}

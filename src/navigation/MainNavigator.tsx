@@ -15,6 +15,7 @@ import JobDetailsScreen from '../screens/jobs/JobDetailsScreen';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSelector } from 'react-redux';
 import { RootState } from '../redux/store';
+import NotificationsScreen from '../screens/notifications/NotificationsScreen';
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
 const Tab = createBottomTabNavigator<DrawerParamList>();
@@ -65,7 +66,110 @@ const HeaderLeft = () => (
   </View>
 );
 
+// const HeaderRight = ({ navigation }: { navigation: any }) => {
+//   const [showNotifications, setShowNotifications] = React.useState(false);
+
+//   const mockNotifications = [
+//     {
+//       id: '1',
+//       title: 'Application Status Update',
+//       message: 'Your application for Senior Software Engineer at TechCorp India has been shortlisted.',
+//       timestamp: '2 hours ago',
+//       read: false,
+//       type: 'shortlist',
+//     },
+//     {
+//       id: '2',
+//       title: 'New Job Recommendation',
+//       message: 'We found a new job matching your profile: Full Stack Developer at Innovate Solutions',
+//       timestamp: '1 day ago',
+//       read: false,
+//       type: 'system',
+//     },
+//   ];
+
+//   return (
+//     <View style={styles.headerRight}>
+//       <TouchableOpacity 
+//         onPress={() => setShowNotifications(true)}
+//         style={styles.headerButton}
+//       >
+//         <View style={styles.notificationBadge}>
+//           <Text style={styles.badgeText}>2</Text>
+//         </View>
+//         <Ionicons name="notifications-outline" size={24} color="#fff" />
+//       </TouchableOpacity>
+//       <TouchableOpacity 
+//         onPress={() => navigation.openDrawer()}
+//         style={styles.headerButton}
+//       >
+//         <Ionicons name="menu" size={24} color="#fff" />
+//       </TouchableOpacity>
+
+//       <Modal
+//         visible={showNotifications}
+//         transparent={true}
+//         animationType="fade"
+//         onRequestClose={() => setShowNotifications(false)}
+//       >
+//         <TouchableOpacity
+//           style={styles.modalOverlay}
+//           activeOpacity={1}
+//           onPress={() => setShowNotifications(false)}
+//         >
+//           <View style={styles.notificationModal}>
+//             <View style={styles.modalHeader}>
+//               <Text style={styles.modalTitle}>Notifications</Text>
+//               <TouchableOpacity onPress={() => setShowNotifications(false)}>
+//                 <Ionicons name="close" size={24} color="#333" />
+//               </TouchableOpacity>
+//             </View>
+//             <ScrollView style={styles.notificationList}>
+//               {mockNotifications.map(notification => (
+//                 <TouchableOpacity
+//                   key={notification.id}
+//                   style={styles.notificationItem}
+//                   onPress={() => {
+//                     setShowNotifications(false);
+//                     navigation.navigate('Notifications');
+//                   }}
+//                 >
+//                   <View style={[styles.notificationIcon, { backgroundColor: notification.type === 'shortlist' ? '#34C759' : '#007AFF' }]}>
+//                     <Ionicons
+//                       name={notification.type === 'shortlist' ? 'checkmark-circle-outline' : 'notifications-outline'}
+//                       size={20}
+//                       color="#fff"
+//                     />
+//                   </View>
+//                   <View style={styles.notificationContent}>
+//                     <Text style={styles.notificationTitle}>{notification.title}</Text>
+//                     <Text style={styles.notificationMessage} numberOfLines={2}>
+//                       {notification.message}
+//                     </Text>
+//                     <Text style={styles.notificationTime}>{notification.timestamp}</Text>
+//                   </View>
+//                 </TouchableOpacity>
+//               ))}
+//             </ScrollView>
+//             <TouchableOpacity
+//               style={styles.viewAllButton}
+//               onPress={() => {
+//                 setShowNotifications(false);
+//                 navigation.navigate('Notifications');
+//               }}
+//             >
+//               <Text style={styles.viewAllText}>View All Notifications</Text>
+//             </TouchableOpacity>
+//           </View>
+//         </TouchableOpacity>
+//       </Modal>
+//     </View>
+//   );
+// };
+
+
 const HeaderRight = ({ navigation }: { navigation: any }) => {
+  const isDrawer = navigation.getState().type === 'drawer';
   const [showNotifications, setShowNotifications] = React.useState(false);
 
   const mockNotifications = [
@@ -86,10 +190,9 @@ const HeaderRight = ({ navigation }: { navigation: any }) => {
       type: 'system',
     },
   ];
-
   return (
     <View style={styles.headerRight}>
-      <TouchableOpacity 
+     <TouchableOpacity 
         onPress={() => setShowNotifications(true)}
         style={styles.headerButton}
       >
@@ -98,13 +201,14 @@ const HeaderRight = ({ navigation }: { navigation: any }) => {
         </View>
         <Ionicons name="notifications-outline" size={24} color="#fff" />
       </TouchableOpacity>
+      {/* Remove the !isDrawer condition to always show menu icon */}
       <TouchableOpacity 
         onPress={() => navigation.openDrawer()}
         style={styles.headerButton}
       >
         <Ionicons name="menu" size={24} color="#fff" />
       </TouchableOpacity>
-
+   
       <Modal
         visible={showNotifications}
         transparent={true}
@@ -165,7 +269,6 @@ const HeaderRight = ({ navigation }: { navigation: any }) => {
     </View>
   );
 };
-
 const TabNavigator = () => {
   return (
     <Tab.Navigator
@@ -270,6 +373,18 @@ const MainStack = () => {
           headerTintColor: '#fff',
         }}
       />
+        <Stack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{
+          headerShown: true,  // Keep header for job application
+          title: 'Notifications',
+          headerStyle: {
+            backgroundColor: '#1dbf73',
+          },
+          headerTintColor: '#fff',
+        }}
+      />
     </Stack.Navigator>
   );
 };
@@ -279,7 +394,19 @@ export const MainNavigator = () => {
     <Drawer.Navigator
       drawerContent={(props) => <CustomDrawerContent {...props} />}
       screenOptions={({ navigation }) => ({
-        headerShown: false,  // Hide the drawer navigator header
+        headerShown: true, // Show header for all drawer screens
+        headerStyle: {
+          backgroundColor: '#1dbf73',
+          elevation: 5,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.2,
+          shadowRadius: 4,
+        },
+        headerTitle: '',
+        headerTintColor: '#fff',
+        headerLeft: () => <HeaderLeft />,
+        headerRight: () => <HeaderRight navigation={navigation} />,
         drawerActiveTintColor: '#1dbf73',
         drawerInactiveTintColor: '#666',
         drawerActiveBackgroundColor: '#e6f8ef',
