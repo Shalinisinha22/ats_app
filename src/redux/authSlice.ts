@@ -36,7 +36,7 @@ export const registerUser = createAsyncThunk(
 );
 
 // --- Login User ---
-// Modify the loginUser thunk
+
 export const loginUser = createAsyncThunk(
   'auth/login',
   async (userData: { email: string; password: string }, { dispatch }) => {
@@ -53,8 +53,6 @@ export const loginUser = createAsyncThunk(
       const updateUser = { ...user, password: userData?.password };
       await AsyncStorage.setItem('user', JSON.stringify(updateUser));
       
-      // Wait for profile fetch to complete before returning
-      // await dispatch(fetchUserProfile()).unwrap();
       
       return updateUser;
     } catch (error: any) {
@@ -88,12 +86,12 @@ export const updateProfile = createAsyncThunk(
         throw new Error(response.data.message || 'Failed to update profile');
       }
 
-      // Fetch the updated profile to ensure we have the latest data
       await dispatch(fetchUserProfile()).unwrap();
 
       return response.data.data;
     } catch (error: any) {
-      // ...existing error handling...
+      const errMsg = error.response?.data?.message || error.message
+      return rejectWithValue(errMsg || 'Failed to update user profile');
     }
   }
 );
@@ -115,7 +113,7 @@ export const fetchUserProfile = createAsyncThunk(
       });
 
       if (response.data.success) {
-        return response.data.data; // Return the profile data
+        return response.data.data; 
       }
 
       throw new Error('Failed to fetch profile data');
@@ -145,7 +143,7 @@ const authSlice = createSlice({
         logout: (state) => {
             state.isAuthenticated = false;
             state.user = null;
-            state.userProfile = null; // Clear userProfile on logout
+            state.userProfile = null; 
             state.loading = false;
             state.error = null;
             AsyncStorage.removeItem('user');

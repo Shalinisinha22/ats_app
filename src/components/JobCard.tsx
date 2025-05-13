@@ -8,6 +8,7 @@ import { RootState } from '../redux/store';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { DrawerParamList } from '../navigation/types';
+import Toast from 'react-native-toast-message';
 
 type Props = {
   job: Job;
@@ -45,11 +46,32 @@ export default function JobCard({ job, ...props }: Props) {
     try {
       if (isSaved) {
         await dispatch(unsaveJobFromApi(job._id)).unwrap();
+        Toast.show({
+          type: 'success',
+          text1: 'Job Unsaved',
+          text2: 'Job has been removed from your saved jobs',
+          position: 'bottom',
+          visibilityTime: 2000,
+        });
       } else {
         await dispatch(saveJobToApi(job._id)).unwrap();
+        Toast.show({
+          type: 'success',
+          text1: 'Job Saved',
+          text2: 'Job has been added to your saved jobs',
+          position: 'bottom',
+          visibilityTime: 2000,
+        });
       }
     } catch (error: any) {
       console.error('Error saving/unsaving job:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error?.message || 'Failed to save/unsave job',
+        position: 'bottom',
+        visibilityTime: 2000,
+      });
     }
   };
 

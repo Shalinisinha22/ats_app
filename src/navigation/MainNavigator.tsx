@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Image, TouchableOpacity, StyleSheet, Text, Dimensions, Modal, ScrollView, Platform } from 'react-native';
+import { View, Image, TouchableOpacity, StyleSheet, Text, Dimensions, Modal, ScrollView, Platform,Alert } from 'react-native';
 import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList, DrawerContentComponentProps } from '@react-navigation/drawer';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -16,6 +16,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSelector } from 'react-redux';
 import { RootState } from '../redux/store';
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
+import { useAppDispatch } from '../redux/store';
+import { logout } from '../redux/authSlice';
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
 const Tab = createBottomTabNavigator<DrawerParamList>();
@@ -23,7 +25,25 @@ const Stack = createNativeStackNavigator<DrawerParamList>();
 
 const CustomDrawerContent = (props: DrawerContentComponentProps) => {
   const user = useSelector((state: RootState) => state.auth.user);
-  
+  const dispatch = useAppDispatch();
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: () => dispatch(logout())
+        }
+      ]
+    );
+  };
   return (
     <DrawerContentScrollView {...props}>
       <LinearGradient
@@ -52,6 +72,17 @@ const CustomDrawerContent = (props: DrawerContentComponentProps) => {
       <View style={styles.drawerContent}>
         <DrawerItemList {...props} />
       </View>
+   {/* Add Logout Button */}
+   <TouchableOpacity
+          style={styles.drawerButton}
+          onPress={handleLogout}
+        >
+          <View style={[styles.drawerIcon, { borderColor: '#ff3b30' }]}>
+            <Ionicons name="log-out-outline" size={22} color="#ff3b30" />
+          </View>
+          <Text style={[styles.drawerButtonText, { color: '#ff3b30' }]}>Logout</Text>
+        </TouchableOpacity>
+
     </DrawerContentScrollView>
   );
 };
@@ -674,5 +705,39 @@ const styles = StyleSheet.create({
   },
   tabIconContainerActive: {
     backgroundColor: 'rgba(29, 191, 115, 0.1)',
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    marginTop: 'auto',
+    marginHorizontal: 6,
+    marginBottom: 16,
+    borderRadius: 6,
+  },
+  logoutText: {
+    color: '#ff3b30',
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 6,
+  },
+  drawerButtonsContainer: {
+    marginTop: 'auto',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingTop: 8,
+  },
+  drawerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    marginHorizontal: 6,
+    marginVertical: 4,
+    borderRadius: 6,
+  },
+  drawerButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 6,
   },
 });

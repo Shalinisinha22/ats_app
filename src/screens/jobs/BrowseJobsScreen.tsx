@@ -134,6 +134,19 @@ export default function BrowseJobsScreen() {
     ));
   };
 
+  const filteredJobs = filterJobs(allJobs, filters);
+
+  // console.log('Filtered Jobs:', filteredJobs);
+
+    // Group jobs by category
+    const jobsByCategory = filteredJobs.reduce((acc, job) => {
+      if (!acc[job.title]) {
+        acc[job.title] = [];
+      }
+      acc[job.title].push(job);
+      return acc;
+    }, {} as Record<string, Job[]>);
+
 
   // Update the search handler to include null check
   const handleSearch = (text: string) => {
@@ -202,6 +215,22 @@ export default function BrowseJobsScreen() {
         <View style={styles.recommendedTitleContainer}>
           <Text style={styles.recommendedTitle}>Recommended Jobs</Text>
         </View>
+
+
+   
+
+        {/* Category-wise Jobs */}
+        {/* {Object.entries(jobsByCategory).map(([category, jobs]) => (
+          <View key={category} style={styles.categorySection}>
+            <View style={styles.categoryHeader}>
+              <Text style={styles.categoryTitle}>{category}</Text>
+              <Text style={styles.jobCount}>{jobs.length} jobs</Text>
+            </View>
+            {jobs.map(job => (
+              <JobCard key={job.id} job={job} />
+            ))}
+          </View>
+        ))} */}
 
 
 

@@ -12,8 +12,9 @@ interface JobFilters {
 
 interface JobsState {
   allJobs: Job[];
-  savedJobs: string[]; // Changed from Job[] to string[]
+  savedJobs: string[]; 
   appliedJobs: Job[];
+  applications?: any[];
   isLoading: boolean;
   error: string | null;
   filters: JobFilters;
@@ -21,8 +22,9 @@ interface JobsState {
 
 const initialState: JobsState = {
   allJobs: [],
-  savedJobs: [], // Will store only job IDs
+  savedJobs: [], 
   appliedJobs: [],
+  applications: [],
   isLoading: false,
   error: null,
   filters: {
@@ -33,7 +35,7 @@ const initialState: JobsState = {
   },
 };
 
-// Async thunks for data persistence
+// Update the fetchAppliedJobs thunk
 export const fetchAppliedJobs = createAsyncThunk(
   'jobs/fetchAppliedJobs',
   async (_, { getState, rejectWithValue }) => {
@@ -41,8 +43,8 @@ export const fetchAppliedJobs = createAsyncThunk(
       const state: RootState = getState() as RootState;
       const user = state.auth.user;
 
-      if (!user) {
-        throw new Error('User not authenticated');
+      if (!user?.token) {
+        return rejectWithValue('Please login to view applied jobs');
       }
 
       const response = await api.get('/user-profile', {
@@ -53,12 +55,31 @@ export const fetchAppliedJobs = createAsyncThunk(
       });
 
       if (!response.data.success) {
-        throw new Error(response.data.message || 'Failed to fetch applied jobs');
+        return rejectWithValue('Failed to fetch applied jobs');
       }
 
-      return response.data.data;
+      const appliedJobs = response.data.data.appliedJobs || [];
+      const applications = response.data.data.applications || [];
+
+      // Fetch full job details for each applied job
+      const jobDetailsPromises = appliedJobs.map(async (jobId: string) => {
+        const jobResponse = await api.get(`/job/${jobId}`, {
+          headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        return jobResponse.data.data;
+      });
+
+      const jobDetails = await Promise.all(jobDetailsPromises);
+
+      return {
+        jobs: jobDetails,
+        applications: applications
+      };
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || error.message);
+      return rejectWithValue(error?.response?.data?.message || 'Failed to fetch applied jobs');
     }
   }
 );
@@ -112,7 +133,7 @@ export const saveJobToApi = createAsyncThunk(
         return rejectWithValue('Please login to save jobs');
       }
 
-      // Check if job is already saved in state
+   
       if (state.jobs.savedJobs.includes(jobId)) {
         return rejectWithValue('You have already saved this job');
       }
@@ -198,8 +219,10 @@ export const unsaveJobFromApi = createAsyncThunk(
         userProfile.savedJobs.map(job => typeof job === 'string' ? job : job._id) : 
         [];
 
-      // Remove the job ID from saved jobs
+     
       const updatedSavedJobs = currentSavedIds.filter(id => id !== jobId);
+      console.log('Updated saved jobs:', updatedSavedJobs);
+     
 
       const response = await api.put(
         '/user-profile',
@@ -239,19 +262,7 @@ export const applyToJob = createAsyncThunk(
         throw new Error('User not authenticated');
       }
 
-      let resumeLink = '';
-      if (applicationData.applicationData.resumeFile) {
-        const formData = new FormData();
-        formData.append('file', {
-          uri: applicationData.applicationData.resumeFile.uri,
-          type: applicationData.applicationData.resumeFile.type,
-          name: applicationData.applicationData.resumeFile.name,
-        });
-
-        resumeLink = applicationData.applicationData.resumeFile.uri;
-      }
-
-      const payload = { ...applicationData, resumeLink };
+      const payload = { ...applicationData };
 
       const response = await api.post('/application', payload, {
         headers: {
@@ -267,6 +278,81 @@ export const applyToJob = createAsyncThunk(
       return response.data.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+
+// Update applyJobToApi thunk
+export const applyJobToApi = createAsyncThunk(
+  'jobs/applyJobToApi',
+  async ({ job, applicationData }: { job: Job; applicationData: any }, { getState, rejectWithValue }) => {
+    try {
+      const state: RootState = getState() as RootState;
+      const user = state.auth.user;
+
+      if (!user?.token) {
+        return rejectWithValue('Please login to apply for jobs');
+      }
+
+      // First get the current profile
+      const profileResponse = await api.get('/user-profile', {
+        headers: {
+          'Authorization': `Bearer ${user.token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!profileResponse.data.success) {
+        return rejectWithValue('Failed to fetch user profile');
+      }
+
+      const userProfile = profileResponse.data.data;
+      
+      // Get current applied jobs and applications
+      const currentAppliedJobs = Array.isArray(userProfile.appliedJobs) ? 
+        userProfile.appliedJobs.map(job => typeof job === 'string' ? job : job._id) : 
+        [];
+      const currentApplications = Array.isArray(userProfile.applications) ? 
+        userProfile.applications : 
+        [];
+
+      // Check if already applied
+      if (currentAppliedJobs.includes(job._id)) {
+        return rejectWithValue('You have already applied to this job');
+      }
+
+      // Update profile with new application and job ID
+      const response = await api.put(
+        '/user-profile',
+        {
+          appliedJobs: [...currentAppliedJobs, job._id]
+          // applications: [...currentApplications, applicationData]
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${user.token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.data.success) {
+        return rejectWithValue(response.data.message || 'Failed to submit application');
+      }
+
+      return {
+        jobId: job._id,
+        application: applicationData,
+        profile: response.data.data
+      };
+
+    } catch (error: any) {
+      console.error('Apply job error:', error?.response?.data || error);
+      return rejectWithValue(
+        error?.response?.data?.message || 
+        error?.message || 
+        'Failed to submit application'
+      );
     }
   }
 );
@@ -380,6 +466,36 @@ const jobsSlice = createSlice({
       .addCase(unsaveJobFromApi.fulfilled, (state, action) => {
         state.error = null;
         state.savedJobs = state.savedJobs.filter(id => id !== action.payload);
+      })
+
+      // Handle fetchAppliedJobs states
+      .addCase(fetchAppliedJobs.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchAppliedJobs.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.error = null;
+        state.appliedJobs = action.payload.jobs;
+        state.applications = action.payload.applications;
+      })
+      .addCase(fetchAppliedJobs.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
+
+      // Handle applyJobToApi states
+      .addCase(applyJobToApi.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.error = null;
+        if (!state.appliedJobs.includes(action.payload.jobId)) {
+          state.appliedJobs.push(action.payload.jobId);
+        }
+        if (state.applications) {
+          state.applications.push(action.payload.application);
+        } else {
+          state.applications = [action.payload.application];
+        }
       });
   },
 });

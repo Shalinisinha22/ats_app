@@ -12,6 +12,7 @@ import {
   Animated,
   useWindowDimensions,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { useAppSelector, useAppDispatch } from '../../redux/store';
 import { logout, updateProfile, fetchUserProfile } from '../../redux/authSlice';
@@ -19,7 +20,9 @@ import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
-
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
+import { uploadToCloudinary, getViewableUrl } from '../../utils/cloudinary';
 type Section = 'basic' | 'contact' | 'education' | 'preferences' | 'skills' | 'resume';
 
 type EducationEntry = {
@@ -51,6 +54,7 @@ const ProfileScreen = () => {
   const dispatch = useAppDispatch();
 
   const { user, loading } = useAppSelector(state => state.auth);
+  const [isOpeningResume, setIsOpeningResume] = useState(false);
 
   const userProfile = useAppSelector((state: RootState) => state.auth.userProfile);
 
@@ -79,6 +83,8 @@ const ProfileScreen = () => {
     userProfile?.experience || []
   );
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isUploadingResume, setIsUploadingResume] = useState(false);
 
   const [formData, setFormData] = useState({
     fullName: user?.name || '',
@@ -119,7 +125,7 @@ const ProfileScreen = () => {
       });
     }
   }, [userProfile, user]);
-  console.log(formData, "formData")
+  // console.log(formData, "formData")
 
   const toggleSection = (section: Section) => {
     if (isAnimating) return; // Prevent toggle while animating
@@ -206,32 +212,130 @@ const ProfileScreen = () => {
         type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
       });
       
-      if (!result.canceled) {
+      if (!result.canceled && result.assets[0]) {
         const fileInfo = result.assets[0];
+        
         if (fileInfo.size && fileInfo.size > 5 * 1024 * 1024) {
           Alert.alert('Error', 'File size must be less than 5MB');
           return;
         }
 
-        // Extract file extension
-        const extension = fileInfo.name.split('.').pop() || 'pdf';
-        
-        // Update profile with resume in required format
-        await dispatch(updateProfile({
-          ...user,
-          resume: {
-            url: fileInfo.uri,
-            name: fileInfo.name,
-            extension: extension
+        setIsUploadingResume(true);
+        try {
+          // Upload to Cloudinary
+          const cloudinaryResponse = await uploadToCloudinary(fileInfo.uri, 'raw');
+          console.log('Resume upload response:', cloudinaryResponse);
+
+          if (cloudinaryResponse) {
+            // Update profile with Cloudinary data
+            await dispatch(updateProfile({
+              ...userProfile,
+              resume: {
+                url: cloudinaryResponse.secure_url,
+                name: fileInfo.name,
+                public_id: cloudinaryResponse.public_id,
+                extension: cloudinaryResponse.format || fileInfo.name.split('.').pop() || 'pdf'
+              }
+            })).unwrap();
+            
+            Alert.alert('Success', 'Resume uploaded successfully');
           }
-        })).unwrap();
-        
-        Alert.alert('Success', 'Resume uploaded successfully');
+        } catch (error: any) {
+          console.error('Resume upload error:', error);
+          Alert.alert(
+            'Error',
+            error?.message || 'Failed to upload resume. Please try again.'
+          );
+        } finally {
+          setIsUploadingResume(false);
+        }
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to upload resume');
+    } catch (error: any) {
+      console.error('Document picker error:', error);
+      Alert.alert('Error', 'Failed to pick resume');
     }
   };
+
+  const handleOpenResume = async () => {
+    try {
+      const fileUrl = userProfile?.resume?.url;
+  
+      if (!fileUrl) {
+        Alert.alert('Error', 'No resume found');
+        return;
+      }
+  
+      setIsOpeningResume(true);
+  
+      // Ensure Cloudinary link uses fl_attachment (if applicable)
+      const isCloudinary = fileUrl.includes('res.cloudinary.com');
+      const cleanUrl = isCloudinary
+        ? fileUrl.replace('/upload/', '/upload/fl_attachment/')
+        : fileUrl;
+  
+      const options = [
+        {
+          name: 'Direct Download',
+          handler: async () => {
+            const supported = await Linking.canOpenURL(cleanUrl);
+            if (supported) {
+              await Linking.openURL(cleanUrl);
+            } else {
+              throw new Error('Cannot open direct URL');
+            }
+          }
+        },
+        {
+          name: 'Google Docs Viewer',
+          handler: async () => {
+            const url = `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(cleanUrl)}`;
+            await WebBrowser.openBrowserAsync(url);
+          }
+        }
+      ];
+  
+      Alert.alert(
+        'Open Resume',
+        'Choose how you would like to view the resume:',
+        [
+          ...options.map(option => ({
+            text: option.name,
+            onPress: async () => {
+              try {
+                await option.handler();
+              } catch (error) {
+                console.error(`Error with ${option.name}:`, error);
+                Alert.alert(
+                  'Failed to Open',
+                  `Could not open with ${option.name}. Try direct download instead?`,
+                  [
+                    {
+                      text: 'Download',
+                      onPress: async () => {
+                        try {
+                          await Linking.openURL(cleanUrl);
+                        } catch (e) {
+                          Alert.alert('Error', 'Failed to download file.');
+                        }
+                      }
+                    },
+                    { text: 'Cancel', style: 'cancel' }
+                  ]
+                );
+              }
+            }
+          })),
+          { text: 'Cancel', style: 'cancel' }
+        ]
+      );
+    } catch (error) {
+      console.error('Resume open error:', error);
+      Alert.alert('Error', 'Failed to open resume.');
+    } finally {
+      setIsOpeningResume(false);
+    }
+  };
+  
 
   const handleLogout = () => {
     Alert.alert(
@@ -265,37 +369,60 @@ const ProfileScreen = () => {
         Alert.alert('Permission needed', 'Please grant camera roll permissions to upload an image.');
         return;
       }
-
+  
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
-
-      if (!result.canceled) {
-        const imageUri = result.assets[0].uri;
-        const fileName = imageUri.split('/').pop() || 'image';
-        const extension = fileName.split('.').pop() || 'jpg';
-        
-        setProfileImage(imageUri);
-        
-        // Update profile with new image in required format
+  
+      if (!result.canceled && result.assets[0]) {
+        setIsUploading(true);
         try {
-          await dispatch(updateProfile({
-            ...user,
-            image: {
-              url: imageUri,
-              name: fileName,
-              extension: extension
-            }
-          })).unwrap();
-          Alert.alert('Success', 'Profile image updated successfully');
-        } catch (error) {
-          Alert.alert('Error', 'Failed to update profile image');
+          const imageUri = result.assets[0].uri;
+          const filename = imageUri.split('/').pop() || 'image.jpg';
+          
+          // Create file object for upload
+          const formData = new FormData();
+          formData.append('file', {
+            uri: imageUri,
+            type: 'image/jpeg',
+            name: filename,
+          } as any);
+          
+          // Upload to Cloudinary
+          const cloudinaryResponse = await uploadToCloudinary(imageUri, 'image');
+          console.log('Cloudinary response:', cloudinaryResponse);
+  
+          if (cloudinaryResponse) {
+            // Update local state
+            setProfileImage(cloudinaryResponse.secure_url);
+            
+            // Update profile with Cloudinary URL
+            await dispatch(updateProfile({
+              ...userProfile,
+              image: {
+                url: cloudinaryResponse.secure_url,
+                name: filename,
+                extension: 'jpg'
+              }
+            })).unwrap();
+            
+            Alert.alert('Success', 'Profile image updated successfully');
+          }
+        } catch (error: any) {
+          console.error('Upload error:', error);
+          Alert.alert(
+            'Error',
+            error?.message || 'Failed to upload image. Please try again.'
+          );
+        } finally {
+          setIsUploading(false);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Image picker error:', error);
       Alert.alert('Error', 'Failed to pick image');
     }
   };
@@ -576,12 +703,18 @@ const ProfileScreen = () => {
           <TouchableOpacity 
             style={styles.avatarWrapper}
             onPress={pickImage}
+            disabled={isUploading}
             activeOpacity={0.8}
           >
-            {profileImage ? (
+            {isUploading ? (
+              <View style={styles.avatar}>
+                <ActivityIndicator size="large" color="#1dbf73" />
+              </View>
+            ) : profileImage ? (
               <Image 
                 source={{ uri: profileImage }} 
                 style={styles.avatarImage}
+                // defaultSource={require('../../assets/default-avatar.png')}
               />
             ) : (
               <View style={styles.avatar}>
@@ -589,7 +722,11 @@ const ProfileScreen = () => {
               </View>
             )}
             <View style={styles.editIconContainer}>
-              <Ionicons name="camera" size={14} color="#fff" />
+              <Ionicons 
+                name={isUploading ? "hourglass" : "camera"} 
+                size={14} 
+                color="#fff" 
+              />
             </View>
           </TouchableOpacity>
           <Text style={styles.userName}>{user?.name}</Text>
@@ -733,24 +870,46 @@ const ProfileScreen = () => {
       {renderSection('Resume', 'resume', (
         <View>
           {userProfile?.resume ? (
-            <View style={styles.resumeInfo}>
-              <Ionicons name="document" size={24} color="#1dbf73" />
-              <Text style={styles.resumeText}>{userProfile?.resume .name}</Text>
+      <View style={styles.resumeInfo}>
+        <Ionicons name="document" size={24} color="#1dbf73" />
+        <TouchableOpacity 
+          onPress={handleOpenResume}
+          style={styles.resumeTextContainer}
+          disabled={isOpeningResume}
+        >
+          {isOpeningResume ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#1dbf73" />
+              <Text style={styles.loadingText}>Opening resume...</Text>
             </View>
           ) : (
+            <Text style={[styles.resumeText, styles.resumeLink]}>
+              {userProfile.resume.name}
+            </Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    ) : (
             <Text style={styles.noResumeText}>No resume uploaded</Text>
           )}
           
           <TouchableOpacity
-            style={styles.uploadButton}
+            style={[styles.uploadButton, isUploadingResume && styles.uploadButtonDisabled]}
             onPress={handlePickResume}
+            disabled={isUploadingResume}
           >
-            <Text style={styles.uploadButtonText}>
-              {userProfile?.resume ? 'Update Resume' : 'Upload Resume'}
-            </Text>
-            <Text style={styles.uploadSubtext}>
-              PDF/DOC/DOCX — Max: 5MB
-            </Text>
+            {isUploadingResume ? (
+              <ActivityIndicator size="small" color="#1dbf73" />
+            ) : (
+              <>
+                <Text style={styles.uploadButtonText}>
+                  {userProfile?.resume ? 'Update Resume' : 'Upload Resume'}
+                </Text>
+                <Text style={styles.uploadSubtext}>
+                  PDF/DOC/DOCX — Max: 5MB
+                </Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
       ))}
@@ -1031,10 +1190,12 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   resumeText: {
-    marginLeft: 8,
-    color: '#2d3436',
     fontSize: 14,
-    flex: 1,
+    color: '#2d3436',
+  },
+  resumeLink: {
+    color: '#1dbf73',
+    textDecorationLine: 'underline',
   },
   noResumeText: {
     color: '#636e72',
@@ -1045,6 +1206,9 @@ const styles = StyleSheet.create({
   uploadSubtext: {
     color: '#636e72',
     fontSize: 12,
+  },
+  uploadButtonDisabled: {
+    opacity: 0.7,
   },
   entryContainer: {
     backgroundColor: '#f8f9fa',
@@ -1098,6 +1262,19 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 16,
     marginTop: 8,
+  },
+  resumeTextContainer: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginLeft: 8,
+    color: '#666',
+    fontSize: 14,
   },
 });
 

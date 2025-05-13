@@ -13,12 +13,14 @@ import { useForm, Controller } from 'react-hook-form';
 import { Picker } from '@react-native-picker/picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAppDispatch, useAppSelector } from '../../redux/store';
-import { applyToJob } from '../../redux/jobsSlice';
+import { applyToJob, applyJobToApi, fetchAppliedJobs } from '../../redux/jobsSlice';
 import { Job } from '../../types';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { DrawerParamList } from '../../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import { nanoid } from '@reduxjs/toolkit';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import Tooltip from 'react-native-walkthrough-tooltip';
 
 type EducationEntry = {
   id: string;
@@ -77,11 +79,10 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
   const { job } = route.params;
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [resumeFile, setResumeFile] = useState<DocumentPicker.DocumentResult | null>(null);
   const { user } = useAppSelector((state) => state.auth);
   const userProfile = useAppSelector((state: RootState) => state.auth.userProfile);
+  const [resumeFile, setResumeFile] = useState<DocumentPicker.DocumentResult | null>(userProfile?.resume || null);
 
-  // console.log(userProfile, 'userProfilejob application');
   const dispatch = useAppDispatch();
   const {
     control,
@@ -92,32 +93,66 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
     formState: { errors },
   } = useForm<FormData>({
     defaultValues: {
-      // Step 1 fields
       email: user?.email || '',
       fullname: user?.name || '',
       headline: userProfile?.headline || '',
       summary: userProfile?.summary || '',
-
-      // Step 2 fields - ensure these have their own values
-      phone: '', // Remove the user?.phone reference to avoid duplication
-      currentLocation: '', // Remove userProfile reference
-      preferredWorkLocation: '', // Remove userProfile reference
-
-      // ...rest of the fields remain same...
+      phone: user?.phone || '',
+      currentLocation: userProfile?.currentLocation || '',
+      preferredWorkLocation: userProfile?.preferredWorkLocation || '',
       totalExperience: '',
       relevantExperience: '',
       currentCompany: userProfile?.currentCompany || '',
       currentJobTitle: userProfile?.currentJobTitle || '',
-      noticePeriod: '',
+      noticePeriod: userProfile?.noticePeriod || '',
       currentCTC: userProfile?.currentCTC?.toString() || '',
       expectedCTC: userProfile?.expectedCTC?.toString() || '',
       reasonForJobChange: userProfile?.reasonForJobChange || '',
       projectDescription: '',
-      termsAccepted: false,
+      termsAccepted: false
     },
+    mode: 'onChange',
+    // rules: {
+    //   email: { required: 'Email is required', pattern: { value: /^\S+@\S+$/i, message: 'Invalid email' } },
+    //   fullname: { required: 'Full name is required' },
+    //   headline: { required: 'Professional headline is required' },
+    //   summary: { required: 'Professional summary is required' },
+    //   phone: { required: 'Phone number is required' },
+    //   currentLocation: { required: 'Current location is required' },
+    //   preferredWorkLocation: { required: 'Preferred location is required' },
+    //   termsAccepted: { required: 'You must accept the terms' }
+    // }
   });
+  
+  const [showStartDate, setShowStartDate] = useState(false);
+  const [showEndDate, setShowEndDate] = useState(false);
+  const [activeDateField, setActiveDateField] = useState({ id: '', type: '', field: '' });
 
-  // Add this to track form values
+  const formatDate = (date: Date) => {
+    return date.toISOString().split('T')[0];
+  };
+
+  const handleDateSelect = (event: any, selectedDate?: Date) => {
+    const { id, type, field } = activeDateField;
+    if (event.type === 'dismissed') {
+      setShowStartDate(false);
+      setShowEndDate(false);
+      return;
+    }
+
+    if (selectedDate) {
+      const formattedDate = formatDate(selectedDate);
+      if (type === 'education') {
+        updateEducationEntry(id, field as keyof EducationEntry, formattedDate);
+      } else {
+        updateExperienceEntry(id, field as keyof ExperienceEntry, formattedDate);
+      }
+    }
+
+    setShowStartDate(false);
+    setShowEndDate(false);
+  };
+
   const formValues = watch();
 
   const [educationEntries, setEducationEntries] = useState<EducationEntry[]>([
@@ -130,7 +165,6 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
     },
   ]);
 
-  // Add these helper functions inside the component
   const addEducationEntry = () => {
     setEducationEntries([
       ...educationEntries,
@@ -192,20 +226,32 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
     );
   };
 
-  // Add this new state to track mounted steps
   const [mountedSteps, setMountedSteps] = useState<number[]>([1]);
 
-  // Update handleNext and handleBack to manage mounted steps
   const handleNext = () => {
     if (step < 6) {
-      // Store current step's data
       const currentValues = getValues();
-
-      // Update form data
-      Object.keys(currentValues).forEach((key) => {
-        setValue(key as keyof FormData, currentValues[key as keyof FormData]);
-      });
-
+      let hasError = false;
+  
+      // Validate fields based on current step
+      switch (step) {
+        case 1:
+          if (!currentValues.email || !currentValues.fullname || !currentValues.headline || !currentValues.summary) {
+            Alert.alert('Error', 'Please fill in all fields in Personal Information');
+            hasError = true;
+          }
+          break;
+  
+        case 2:
+          if (!currentValues.phone || !currentValues.currentLocation || !currentValues.preferredWorkLocation) {
+            Alert.alert('Error', 'Please fill in all contact and location details');
+            hasError = true;
+          }
+          break;
+      }
+  
+      if (hasError) return;
+  
       const nextStep = step + 1;
       setStep(nextStep);
       if (!mountedSteps.includes(nextStep)) {
@@ -216,10 +262,8 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
 
   const handleBack = () => {
     if (step > 1) {
-      // Store current step's data
       const currentValues = getValues();
 
-      // Update form data
       Object.keys(currentValues).forEach((key) => {
         setValue(key as keyof FormData, currentValues[key as keyof FormData]);
       });
@@ -231,42 +275,59 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
   const pickDocument = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: [
-          'application/pdf',
-          'application/msword',
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        ],
+        type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
       });
+
       if (!result.canceled) {
-        setResumeFile(result);
+        const fileInfo = result.assets[0];
+        if (fileInfo.size && fileInfo.size > 5 * 1024 * 1024) {
+          Alert.alert('Error', 'File size must be less than 5MB');
+          return;
+        }
+
+        const extension = fileInfo.name.split('.').pop() || 'pdf';
+
+        setResumeFile(fileInfo);
+
+        Alert.alert('Success', 'Resume uploaded successfully');
       }
-    } catch (err) {
-      Alert.alert('Error', 'Failed to pick document');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to upload resume');
     }
   };
 
   const onSubmit = async (data: FormData) => {
-    if (!resumeFile || resumeFile.canceled) {
-      Alert.alert('Error', 'Please upload your resume');
-      return;
-    }
-
     try {
       setIsSubmitting(true);
 
+      // Validate resume
+      if (!resumeFile) {
+        Alert.alert('Error', 'Please upload your resume');
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!data.termsAccepted) {
+        Alert.alert('Error', 'Please accept the terms and conditions');
+        setIsSubmitting(false);
+        return;
+      }
+
+      console.log('Submitting application...', data); 
+
       const applicationData = {
+        jobId: job._id,
+        status: 'pending',
+        appliedDate: new Date().toISOString(),
         email: data.email,
         fullName: data.fullname,
         headline: data.headline,
         summary: data.summary,
-
         phone: data.phone,
         currentLocation: data.currentLocation,
         preferredWorkLocation: data.preferredWorkLocation,
-
         education: educationEntries,
         experience: experienceEntries,
-
         currentCompany: data.currentCompany,
         currentJobTitle: data.currentJobTitle,
         totalExperience: data.totalExperience,
@@ -275,54 +336,92 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
         currentCTC: data.currentCTC,
         expectedCTC: data.expectedCTC,
         reasonForJobChange: data.reasonForJobChange,
-
         projectDescription: data.projectDescription,
-        termsAccepted: data.termsAccepted,
-        resumeFile: resumeFile.assets[0],
-        appliedDate: new Date().toISOString(),
-        jobId: job._id, // Update this line to use _id instead of id
-        status: 'pending',
+        resume: {
+          url: resumeFile.uri, // Change from url to uri
+          name: resumeFile.name,
+          extension: "pdf"
+        }
       };
 
-      const result = await dispatch(applyToJob({ ...job, applicationData })).unwrap();
+      console.log('Application data:', applicationData); // Add this for debugging
 
-      // Show success message and navigate
-      Alert.alert(
-        'Success!',
-        'Your job application has been submitted successfully.',
-        [
-          {
-            text: 'View Applied Jobs',
-            onPress: () => navigation.replace('AppliedJobs'),
-          },
-          {
-            text: 'Browse More Jobs',
-            onPress: () => navigation.replace('BrowseJobs'),
-          },
-        ],
-        {
-          cancelable: false,
-        }
-      );
-    } catch (error) {
+      // const result = await dispatch(applyJobToApi({ job, applicationData })).unwrap();
+      // console.log('API Response:', result); // Add this for debugging
+
+      // await dispatch(fetchAppliedJobs()).unwrap();
+
+      // Alert.alert(
+      //   'Success!',
+      //   'Your job application has been submitted successfully.',
+      //   [
+      //     {
+      //       text: 'View Applied Jobs',
+      //       onPress: () => navigation.replace('AppliedJobs'),
+      //     },
+      //     {
+      //       text: 'Browse More Jobs',
+      //       onPress: () => navigation.replace('BrowseJobs'),
+      //     },
+      //   ]
+      // );
+    } catch (error: any) {
+      console.error('Application submission error:', error); // Add this for debugging
       Alert.alert(
         'Error',
-        'Failed to submit application. Please try again.',
-        [{ text: 'OK' }],
-        { cancelable: false }
+        error?.message || 'Failed to submit application. Please try again.'
       );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Update renderStep to use formValues
+  const InputLabel = ({ label, tooltip, required = false, showToolTip }) => {
+    const [showTip, setShowTip] = useState(false);
+    
+    return (
+      <View style={styles.labelContainer}>
+        <Text style={styles.inputLabel}>
+          {label} {required && <Text style={styles.requiredStar}>*</Text>}
+        </Text>
+
+        {showToolTip && (
+          <Tooltip
+            isVisible={showTip}
+            content={
+              <Text style={[styles.tooltipText, { color: '#111' }]}>{tooltip}</Text>
+            }
+            placement="top"
+            onClose={() => setShowTip(false)}
+          >
+            <TouchableOpacity 
+              onPress={() => setShowTip(prev => !prev)}
+              style={styles.tooltipButton}
+            >
+              <Ionicons 
+                name="information-circle-outline" 
+                size={20} 
+                color="#6c757d" 
+              />
+            </TouchableOpacity>
+          </Tooltip>
+        )}
+      </View>
+    );
+  };
+
   const renderStep = () => {
     switch (step) {
       case 1:
         return (
           <View>
             <Text style={styles.stepTitle}>Step 1: Personal Information</Text>
+            <InputLabel 
+              label="Email Address"
+              tooltip="Enter your primary email address eg. user@gmail.com"
+              required
+              showToolTip={true}
+            />
             <Controller
               control={control}
               name="email"
@@ -333,7 +432,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={styles.input}
-                   placeholderTextColor="#666"
+                  placeholderTextColor="#666"
                   placeholder="Email"
                   value={formValues.email}
                   onChangeText={onChange}
@@ -341,19 +440,31 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                 />
               )}
             />
+            <InputLabel 
+              label="Full Name"
+              required
+              showToolTip={false}
+            />
             <Controller
               control={control}
               name="fullname"
+              label="Full Name"
               rules={{ required: 'Full name is required' }}
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={styles.input}
-                   placeholderTextColor="#666"
+                  placeholderTextColor="#666"
                   placeholder="Full Name"
                   value={formValues.fullname}
                   onChangeText={onChange}
                 />
               )}
+            />
+            <InputLabel 
+              label="Professional Headline"
+              tooltip="A brief title that describes your professional identity (e.g., 'Senior Software Engineer')"
+              required
+              showToolTip={true}
             />
             <Controller
               control={control}
@@ -362,12 +473,18 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={styles.input}
-                   placeholderTextColor="#666"
+                  placeholderTextColor="#666"
                   placeholder="Professional Headline"
                   value={formValues.headline}
                   onChangeText={onChange}
                 />
               )}
+            />
+            <InputLabel 
+              label="Professional Summary"
+              tooltip="Provide a concise overview of your professional background"
+              required
+              showToolTip={true}
             />
             <Controller
               control={control}
@@ -376,7 +493,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={[styles.input, styles.textArea]}
-                   placeholderTextColor="#666"
+                  placeholderTextColor="#666"
                   placeholder="Professional Summary"
                   value={formValues.summary}
                   onChangeText={onChange}
@@ -392,6 +509,11 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
         return (
           <View>
             <Text style={styles.stepTitle}>Step 2: Contact & Location Details</Text>
+            <InputLabel 
+              label="Mobile Number"
+              required
+              showToolTip={false}
+            />
             <Controller
               control={control}
               name="phone"
@@ -399,18 +521,23 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={styles.input}
-                   placeholderTextColor="#666"
+                  placeholderTextColor="#666"
                   placeholder="Phone Number"
                   value={formValues.phone}
                   onChangeText={(text) => {
                     if (/^\d*$/.test(text)) {
                       onChange(text);
-                      setValue('phone', text); // Explicitly set the value
+                      setValue('phone', text);
                     }
                   }}
                   keyboardType="phone-pad"
                 />
               )}
+            />
+            <InputLabel 
+              label="Current Location"
+              required
+              showToolTip={false}
             />
             <Controller
               control={control}
@@ -419,15 +546,20 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={styles.input}
-                   placeholderTextColor="#666"
+                  placeholderTextColor="#666"
                   placeholder="Current Location (City, State)"
                   value={formValues.currentLocation}
                   onChangeText={(text) => {
                     onChange(text);
-                    setValue('currentLocation', text); // Explicitly set the value
+                    setValue('currentLocation', text);
                   }}
                 />
               )}
+            />
+            <InputLabel 
+              label="Preferred Work Location"
+              required
+              showToolTip={false}
             />
             <Controller
               control={control}
@@ -436,12 +568,12 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={styles.input}
-                   placeholderTextColor="#666"
+                  placeholderTextColor="#666"
                   placeholder="Preferred Work Location"
                   value={formValues.preferredWorkLocation}
                   onChangeText={(text) => {
                     onChange(text);
-                    setValue('preferredWorkLocation', text); // Explicitly set the value
+                    setValue('preferredWorkLocation', text);
                   }}
                 />
               )}
@@ -453,7 +585,6 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
         return (
           <View>
             <Text style={styles.stepTitle}>Step 3: Education & Experience</Text>
-
             <Text style={styles.sectionSubtitle}>Education</Text>
             {educationEntries.map((entry) => (
               <View key={entry.id} style={styles.entryContainer}>
@@ -466,48 +597,60 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                     <Ionicons name="close-circle" size={24} color="#ff3b30" />
                   </TouchableOpacity>
                 </View>
-
+                <InputLabel 
+                  label="Degree/Certification"
+                  required
+                  showToolTip={false}
+                />
                 <TextInput
                   style={styles.input}
                   value={entry.degree}
                   onChangeText={(text) => updateEducationEntry(entry.id, 'degree', text)}
                   placeholder="Degree/Certification"
-                   placeholderTextColor="#666"
+                  placeholderTextColor="#666"
                 />
-
+                <InputLabel 
+                  label="Institution Name"
+                  required
+                  showToolTip={false}
+                />
                 <TextInput
                   style={styles.input}
                   value={entry.institution}
                   onChangeText={(text) => updateEducationEntry(entry.id, 'institution', text)}
                   placeholder="Institution Name"
-                   placeholderTextColor="#666"
+                  placeholderTextColor="#666"
                 />
-
                 <View style={styles.dateContainer}>
-                  <TextInput
+                  <TouchableOpacity
                     style={[styles.input, styles.dateInput]}
-                    value={entry.startDate}
-                    onChangeText={(text) => updateEducationEntry(entry.id, 'startDate', text)}
-                    placeholder="Start Date"
-                     placeholderTextColor="#666"
-                  />
-                  <TextInput
+                    onPress={() => {
+                      setActiveDateField({ id: entry.id, type: 'education', field: 'startDate' });
+                      setShowStartDate(true);
+                    }}
+                  >
+                    <Text style={entry.startDate ? styles.dateText : styles.placeholderText}>
+                      {entry.startDate || 'Start Date'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
                     style={[styles.input, styles.dateInput]}
-                    value={entry.endDate}
-                    onChangeText={(text) => updateEducationEntry(entry.id, 'endDate', text)}
-                    placeholder="End Date"
-                     placeholderTextColor="#666"
-                  />
+                    onPress={() => {
+                      setActiveDateField({ id: entry.id, type: 'education', field: 'endDate' });
+                      setShowEndDate(true);
+                    }}
+                  >
+                    <Text style={entry.endDate ? styles.dateText : styles.placeholderText}>
+                      {entry.endDate || 'End Date'}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             ))}
-
             <TouchableOpacity style={styles.addButton} onPress={addEducationEntry}>
               <Ionicons name="add-circle" size={24} color="#1dbf73" />
               <Text style={styles.addButtonText}>Add Education</Text>
             </TouchableOpacity>
-
-            {/* Rest of your experience fields */}
             <Text style={[styles.sectionSubtitle, { marginTop: 20 }]}>Work Experience</Text>
             {experienceEntries.map((entry) => (
               <View key={entry.id} style={styles.entryContainer}>
@@ -520,52 +663,73 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                     <Ionicons name="close-circle" size={24} color="#ff3b30" />
                   </TouchableOpacity>
                 </View>
-
                 <TextInput
                   style={styles.input}
                   value={entry.companyName}
                   onChangeText={(text) => updateExperienceEntry(entry.id, 'companyName', text)}
                   placeholder="Company Name"
-                   placeholderTextColor="#666"
+                  placeholderTextColor="#666"
                 />
-
                 <TextInput
                   style={styles.input}
                   value={entry.jobTitle}
                   onChangeText={(text) => updateExperienceEntry(entry.id, 'jobTitle', text)}
                   placeholder="Job Title"
-                   placeholderTextColor="#666"
+                  placeholderTextColor="#666"
                 />
-
                 <View style={styles.dateContainer}>
-                  <TextInput
+                  <TouchableOpacity
                     style={[styles.input, styles.dateInput]}
-                    value={entry.startDate}
-                    onChangeText={(text) => updateExperienceEntry(entry.id, 'startDate', text)}
-                    placeholder="Start Date"
-                     placeholderTextColor="#666"
-                  />
-                  <TextInput
+                    onPress={() => {
+                      setActiveDateField({ id: entry.id, type: 'experience', field: 'startDate' });
+                      setShowStartDate(true);
+                    }}
+                  >
+                    <Text style={entry.startDate ? styles.dateText : styles.placeholderText}>
+                      {entry.startDate || 'Start Date'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
                     style={[styles.input, styles.dateInput]}
-                    value={entry.endDate}
-                    onChangeText={(text) => updateExperienceEntry(entry.id, 'endDate', text)}
-                    placeholder="End Date"
-                     placeholderTextColor="#666"
-                  />
+                    onPress={() => {
+                      setActiveDateField({ id: entry.id, type: 'experience', field: 'endDate' });
+                      setShowEndDate(true);
+                    }}
+                  >
+                    <Text style={entry.endDate ? styles.dateText : styles.placeholderText}>
+                      {entry.endDate || 'End Date'}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
-
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   value={entry.description}
                   onChangeText={(text) => updateExperienceEntry(entry.id, 'description', text)}
                   placeholder="Job Description"
-                   placeholderTextColor="#666"
+                  placeholderTextColor="#666"
                   multiline
                   numberOfLines={4}
                 />
               </View>
             ))}
-
+            {showStartDate && (
+              <DateTimePicker
+                value={new Date()}
+                mode="date"
+                display="default"
+                onChange={handleDateSelect}
+                maximumDate={new Date()}
+              />
+            )}
+            {showEndDate && (
+              <DateTimePicker
+                value={new Date()}
+                mode="date"
+                display="default"
+                onChange={handleDateSelect}
+                maximumDate={new Date()}
+              />
+            )}
             <TouchableOpacity style={styles.addButton} onPress={addExperienceEntry}>
               <Ionicons name="add-circle" size={24} color="#1dbf73" />
               <Text style={styles.addButtonText}>Add Work Experience</Text>
@@ -584,7 +748,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                 <TextInput
                   style={styles.input}
                   placeholder="Notice Period (in days)"
-                   placeholderTextColor="#666"
+                  placeholderTextColor="#666"
                   value={formValues.noticePeriod}
                   onChangeText={onChange}
                   keyboardType="numeric"
@@ -598,7 +762,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={styles.input}
-                   placeholderTextColor="#666"
+                  placeholderTextColor="#666"
                   placeholder="Current CTC (₹ LPA)"
                   value={formValues.currentCTC}
                   onChangeText={onChange}
@@ -614,7 +778,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                 <TextInput
                   style={styles.input}
                   placeholder="Expected CTC (₹ LPA)"
-                   placeholderTextColor="#666"
+                  placeholderTextColor="#666"
                   value={formValues.expectedCTC}
                   onChangeText={onChange}
                   keyboardType="numeric"
@@ -629,7 +793,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   placeholder="Reason for Job Change"
-                   placeholderTextColor="#666"
+                  placeholderTextColor="#666"
                   value={formValues.reasonForJobChange}
                   onChangeText={onChange}
                   multiline
@@ -659,7 +823,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={[styles.input, styles.textArea]}
-                   placeholderTextColor="#666"
+                  placeholderTextColor="#666"
                   placeholder="Your Response"
                   value={formValues.projectDescription}
                   onChangeText={onChange}
@@ -678,7 +842,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
             <TouchableOpacity style={styles.uploadButton} onPress={pickDocument}>
               <Text style={styles.uploadButtonText}>
                 {resumeFile && !resumeFile.canceled
-                  ? `Selected: ${resumeFile.assets[0].name}`
+                  ? `Selected: ${resumeFile?.name}`
                   : 'Upload Resume (PDF, DOC, DOCX — Max: 5MB)'}
               </Text>
             </TouchableOpacity>
@@ -712,7 +876,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
       <View style={styles.header}>
         <Text style={styles.title}>{job.title}</Text>
         <Text style={styles.subtitle}>
-          {job.company?.userId?.name || 'Company Name'} {/* Use optional chaining to safely access nested properties */}
+          {job.company?.userId?.name || 'Company Name'}
         </Text>
       </View>
 
@@ -747,12 +911,16 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
-            style={[styles.button, styles.submitButton, isSubmitting && styles.disabledButton]}
+            style={[
+              styles.button,
+              styles.submitButton,
+              isSubmitting && styles.disabledButton
+            ]}
             onPress={handleSubmit(onSubmit)}
             disabled={isSubmitting}
           >
             {isSubmitting ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator size="small" color="#fff" />
             ) : (
               <Text style={styles.buttonText}>Submit Application</Text>
             )}
@@ -951,9 +1119,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  dateInput: {
-    flex: 0.48,
-  },
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -971,5 +1136,62 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1dbf73',
     fontWeight: '500',
+  },
+  dateText: {
+    color: '#212529',
+    fontSize: 16,
+  },
+  placeholderText: {
+    color: '#6c757d',
+    fontSize: 16,
+  },
+  dateInput: {
+    flex: 0.48,
+    justifyContent: 'center',
+    height: 48,
+  },
+  labelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 8,
+  },
+  inputLabel: {
+    fontSize: 14,
+    color: '#212529',
+    marginRight: 8,
+    fontWeight: '200',
+    opacity: 0.8,
+  },
+  requiredStar: {
+    color: '#dc3545',
+    fontWeight: 'bold',
+  },
+  tooltipText: {
+    fontSize: 8,
+    color: '#111',
+    padding: 8,
+    maxWidth: 200,
+  },
+  inputError: {
+    borderColor: '#dc3545',
+  },
+  errorText: {
+    color: '#dc3545',
+    fontSize: 12,
+    marginHorizontal: 20,
+    marginTop: -12,
+    marginBottom: 16,
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#6c757d',
+    marginHorizontal: 20,
+    marginTop: -12,
+    marginBottom: 16,
+  },
+  tooltipButton: {
+    padding: 4,
+    marginLeft: 4,
   },
 });
