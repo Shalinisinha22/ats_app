@@ -19,18 +19,22 @@ import { fetchUserProfile } from '../../redux/authSlice';
 import { RootState } from '../../redux/store';
 import { mockJobs } from '../../utils/mockData'; // Add this import
 import JobCard from '../../components/JobCard';
+import { JobCardSkeleton } from '../../components/JobCardSkeleton'; // Add import
 
-// Add filterJobs function before the component
+// Update the filterJobs function with null checks
 const filterJobs = (jobs: Job[], filters: JobFilters) => {
   if (!jobs || !filters) return [];
   
   return jobs.filter(job => {
+    // Add null checks for job properties
+    if (!job || !job.title) return false;
+
     const matchesSearch = !filters.search || 
       job.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-      (job.company?.name || '').toLowerCase().includes(filters.search.toLowerCase());
+      (job.company?.userId?.name || '').toLowerCase().includes(filters.search.toLowerCase());
 
     const matchesLocation = !filters.location || 
-      job.location.toLowerCase() === filters.location.toLowerCase();
+      (job.location && job.location.toLowerCase() === filters.location.toLowerCase());
 
     const matchesCategory = !filters.category || 
       job.title.toLowerCase() === filters.category.toLowerCase();
@@ -70,11 +74,19 @@ export default function BrowseJobsScreen() {
 
   // Helper functions for unique values from API data
   const getUniqueLocations = (jobs: Job[]) => {
-    return Array.from(new Set(jobs.map(job => job.location)));
+    return Array.from(new Set(
+      jobs
+        .filter(job => job && job.location)
+        .map(job => job.location)
+    ));
   };
 
   const getUniqueCategories = (jobs: Job[]) => {
-    return Array.from(new Set(jobs.map(job => job.title)));
+    return Array.from(new Set(
+      jobs
+        .filter(job => job && job.title)
+        .map(job => job.title)
+    ));
   };
 
   // Use mockJobs as fallback if API fails or returns empty
@@ -88,20 +100,27 @@ export default function BrowseJobsScreen() {
   const totalSaved = savedJobs.length;
   const totalInterviews = appliedJobs.filter(job => job.status === 'shortlisted').length;
 
-  // Add validation function for jobs
+  // Update the isValidJob function with more thorough validation
   const isValidJob = (job: any): job is Job => {
-    return job && typeof job._id === 'string';
+    return (
+      job &&
+      typeof job._id === 'string' &&
+      typeof job.title === 'string' &&
+      job.company && 
+      typeof job.company._id === 'string'
+    );
   };
 
   // Filter out invalid jobs before rendering
   const validJobs = allJobs.filter(isValidJob);
 
   const renderJobs = () => {
-    // Only show loading on initial load
     if (isLoading && allJobs.length === 0) {
       return (
-        <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color="#1dbf73" />
+        <View style={styles.jobsList}>
+          {[1, 2, 3, 4].map((_, index) => (
+            <JobCardSkeleton key={index} />
+          ))}
         </View>
       );
     }
@@ -124,14 +143,18 @@ export default function BrowseJobsScreen() {
       );
     }
 
-    return filteredJobs.map(job => (
-      <JobCard
-      key={`job-${job._id}-${job.company._id}`}
-        job={job}
-        showSaveButton={true}
-        showApplyButton={true}
-      />
-    ));
+    return filteredJobs.map(job => {
+      if (!job || !job.company) return null;
+      
+      return (
+        <JobCard
+          key={`job-${job._id || 'unknown'}-${job.company._id || 'unknown'}`}
+          job={job}
+          showSaveButton={true}
+          showApplyButton={true}
+        />
+      );
+    }).filter(Boolean);
   };
 
   const filteredJobs = filterJobs(allJobs, filters);
@@ -140,6 +163,8 @@ export default function BrowseJobsScreen() {
 
     // Group jobs by category
     const jobsByCategory = filteredJobs.reduce((acc, job) => {
+      if (!job || !job.title) return acc;
+      
       if (!acc[job.title]) {
         acc[job.title] = [];
       }
@@ -355,13 +380,22 @@ const styles = StyleSheet.create({
   kpiCard: {
     width: kpiCardWidth,
     borderRadius: 8,
-    padding: 8,
+    padding: 10,
     backgroundColor: '#fff',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#eee',
     height: 'auto',
     minHeight: 90,
+    elevation: 2,
+    shadowColor: '#000',    
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    marginBottom: 16,
   },
   kpiIconContainer: {
     width: 36,
@@ -369,7 +403,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 4
   },
   kpiValue: {
     fontSize: Math.min(18, kpiCardWidth * 0.15),
@@ -513,8 +547,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#1dbf73',
-    marginHorizontal: 16,
-    marginBottom: 16,
+    marginHorizontal: 15,
+    marginBottom: 8,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,

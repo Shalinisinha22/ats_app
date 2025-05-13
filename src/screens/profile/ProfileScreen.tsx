@@ -23,6 +23,8 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { uploadToCloudinary, getViewableUrl } from '../../utils/cloudinary';
+import DateTimePicker from '@react-native-community/datetimepicker';
+
 type Section = 'basic' | 'contact' | 'education' | 'preferences' | 'skills' | 'resume';
 
 type EducationEntry = {
@@ -85,6 +87,13 @@ const ProfileScreen = () => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isUploadingResume, setIsUploadingResume] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [dateType, setDateType] = useState<{
+    type: 'education' | 'experience';
+    id: string;
+    field: 'startDate' | 'endDate';
+  } | null>(null);
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   const [formData, setFormData] = useState({
     fullName: user?.name || '',
@@ -474,6 +483,170 @@ const ProfileScreen = () => {
     setExperienceEntries(entries => entries.filter(entry => entry.id !== id));
   };
 
+  const handleDatePress = (type: 'education' | 'experience', id: string, field: 'startDate' | 'endDate') => {
+    if (editingSection === 'education') {
+      setDateType({ type, id, field });
+      setShowDatePicker(true);
+    }
+  };
+
+  const onDateChange = (event: any, selected: Date | undefined) => {
+    setShowDatePicker(false);
+    
+    if (selected && dateType) {
+      const formattedDate = selected.toLocaleDateString('en-US', {
+        month: 'short',
+        year: 'numeric'
+      });
+      
+      if (dateType.type === 'education') {
+        updateEducationEntry(dateType.id, dateType.field, formattedDate);
+      } else {
+        updateExperienceEntry(dateType.id, dateType.field, formattedDate);
+      }
+    }
+    setDateType(null);
+  };
+
+  const renderEducationEntry = (entry: EducationEntry) => (
+    <View key={entry.id} style={styles.entryContainer}>
+      <View style={styles.entryHeader}>
+        <Text style={styles.entryTitle}>Education Entry</Text>
+        {editingSection === 'education' && (
+          <TouchableOpacity
+            onPress={() => removeEducationEntry(entry.id)}
+            style={styles.removeButton}
+          >
+            <Ionicons name="close-circle" size={24} color="#ff3b30" />
+          </TouchableOpacity>
+        )}
+      </View>
+      
+      <TextInput
+        style={styles.input}
+        value={entry.degree}
+        onChangeText={(text) => updateEducationEntry(entry.id, 'degree', text)}
+         placeholderTextColor="#666"
+        placeholder="Degree/Certification"
+        editable={editingSection === 'education'}
+      />
+      
+      <TextInput
+        style={styles.input}
+        value={entry.institution}
+        onChangeText={(text) => updateEducationEntry(entry.id, 'institution', text)}
+         placeholderTextColor="#666"
+        placeholder="Institution Name"
+        editable={editingSection === 'education'}
+      />
+      
+      <View style={styles.dateContainer}>
+        <TouchableOpacity 
+          style={[styles.input, styles.dateInput]}
+          onPress={() => handleDatePress('education', entry.id, 'startDate')}
+          disabled={editingSection !== 'education'}
+        >
+          <Text style={[
+            styles.dateText,
+            !entry.startDate && styles.placeholderText
+          ]}>
+            {entry.startDate || 'Start Date'}
+          </Text>
+          <Ionicons name="calendar-outline" size={20} color="#666" />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.input, styles.dateInput]}
+          onPress={() => handleDatePress('education', entry.id, 'endDate')}
+          disabled={editingSection !== 'education'}
+        >
+          <Text style={[
+            styles.dateText,
+            !entry.endDate && styles.placeholderText
+          ]}>
+            {entry.endDate || 'End Date'}
+          </Text>
+          <Ionicons name="calendar-outline" size={20} color="#666" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderExperienceEntry = (entry: ExperienceEntry) => (
+    <View key={entry.id} style={styles.entryContainer}>
+      <View style={styles.entryHeader}>
+        <Text style={styles.entryTitle}>Work Experience Entry</Text>
+        {editingSection === 'education' && (
+          <TouchableOpacity
+            onPress={() => removeExperienceEntry(entry.id)}
+            style={styles.removeButton}
+          >
+            <Ionicons name="close-circle" size={24} color="#ff3b30" />
+          </TouchableOpacity>
+        )}
+      </View>
+      
+      <TextInput
+        style={styles.input}
+        value={entry.company}
+        onChangeText={(text) => updateExperienceEntry(entry.id, 'company', text)}
+         placeholderTextColor="#666"
+        placeholder="Company Name"
+        editable={editingSection === 'education'}
+      />
+      
+      <TextInput
+        style={styles.input}
+        value={entry.title}
+        onChangeText={(text) => updateExperienceEntry(entry.id, 'title', text)}
+         placeholderTextColor="#666"
+        placeholder="Job Title"
+        editable={editingSection === 'education'}
+      />
+      
+      <View style={styles.dateContainer}>
+        <TouchableOpacity 
+          style={[styles.input, styles.dateInput]}
+          onPress={() => handleDatePress('experience', entry.id, 'startDate')}
+          disabled={editingSection !== 'education'}
+        >
+          <Text style={[
+            styles.dateText,
+            !entry.startDate && styles.placeholderText
+          ]}>
+            {entry.startDate || 'Start Date'}
+          </Text>
+          <Ionicons name="calendar-outline" size={20} color="#666" />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.input, styles.dateInput]}
+          onPress={() => handleDatePress('experience', entry.id, 'endDate')}
+          disabled={editingSection !== 'education'}
+        >
+          <Text style={[
+            styles.dateText,
+            !entry.endDate && styles.placeholderText
+          ]}>
+            {entry.endDate || 'End Date'}
+          </Text>
+          <Ionicons name="calendar-outline" size={20} color="#666" />
+        </TouchableOpacity>
+      </View>
+      
+      <TextInput
+        style={[styles.input, styles.textArea]}
+        value={entry.description}
+        onChangeText={(text) => updateExperienceEntry(entry.id, 'description', text)}
+         placeholderTextColor="#666"
+        placeholder="Job Description"
+        multiline
+        numberOfLines={4}
+        editable={editingSection === 'education'}
+      />
+    </View>
+  );
+
   const renderSection = (
     title: string,
     section: Section,
@@ -551,58 +724,7 @@ const ProfileScreen = () => {
   const renderEducationExperienceSection = () => (
     <View>
       <Text style={styles.sectionSubtitle}>Education</Text>
-      {educationEntries.map((entry) => (
-        <View key={entry.id} style={styles.entryContainer}>
-          <View style={styles.entryHeader}>
-            <Text style={styles.entryTitle}>Education Entry</Text>
-            {editingSection === 'education' && (
-              <TouchableOpacity
-                onPress={() => removeEducationEntry(entry.id)}
-                style={styles.removeButton}
-              >
-                <Ionicons name="close-circle" size={24} color="#ff3b30" />
-              </TouchableOpacity>
-            )}
-          </View>
-          
-          <TextInput
-            style={styles.input}
-            value={entry.degree}
-            onChangeText={(text) => updateEducationEntry(entry.id, 'degree', text)}
-             placeholderTextColor="#666"
-            placeholder="Degree/Certification"
-            editable={editingSection === 'education'}
-          />
-          
-          <TextInput
-            style={styles.input}
-            value={entry.institution}
-            onChangeText={(text) => updateEducationEntry(entry.id, 'institution', text)}
-             placeholderTextColor="#666"
-            placeholder="Institution Name"
-            editable={editingSection === 'education'}
-          />
-          
-          <View style={styles.dateContainer}>
-            <TextInput
-              style={[styles.input, styles.dateInput]}
-              value={entry.startDate}
-              onChangeText={(text) => updateEducationEntry(entry.id, 'startDate', text)}
-               placeholderTextColor="#666"
-              placeholder="Start Date"
-              editable={editingSection === 'education'}
-            />
-            <TextInput
-              style={[styles.input, styles.dateInput]}
-              value={entry.endDate}
-              onChangeText={(text) => updateEducationEntry(entry.id, 'endDate', text)}
-               placeholderTextColor="#666"
-              placeholder="End Date"
-              editable={editingSection === 'education'}
-            />
-          </View>
-        </View>
-      ))}
+      {educationEntries.map((entry) => renderEducationEntry(entry))}
 
       {editingSection === 'education' && (
         <TouchableOpacity
@@ -615,69 +737,7 @@ const ProfileScreen = () => {
       )}
 
       <Text style={[styles.sectionSubtitle, { marginTop: 20 }]}>Work Experience</Text>
-      {experienceEntries.map((entry) => (
-        <View key={entry.id} style={styles.entryContainer}>
-          <View style={styles.entryHeader}>
-            <Text style={styles.entryTitle}>Work Experience Entry</Text>
-            {editingSection === 'education' && (
-              <TouchableOpacity
-                onPress={() => removeExperienceEntry(entry.id)}
-                style={styles.removeButton}
-              >
-                <Ionicons name="close-circle" size={24} color="#ff3b30" />
-              </TouchableOpacity>
-            )}
-          </View>
-          
-          <TextInput
-            style={styles.input}
-            value={entry.companyName}
-            onChangeText={(text) => updateExperienceEntry(entry.id, 'companyName', text)}
-             placeholderTextColor="#666"
-            placeholder="Company Name"
-            editable={editingSection === 'education'}
-          />
-          
-          <TextInput
-            style={styles.input}
-            value={entry.jobTitle}
-            onChangeText={(text) => updateExperienceEntry(entry.id, 'jobTitle', text)}
-             placeholderTextColor="#666"
-            placeholder="Job Title"
-            editable={editingSection === 'education'}
-          />
-          
-          <View style={styles.dateContainer}>
-            <TextInput
-              style={[styles.input, styles.dateInput]}
-              value={entry.startDate}
-              onChangeText={(text) => updateExperienceEntry(entry.id, 'startDate', text)}
-               placeholderTextColor="#666"
-              placeholder="Start Date"
-              editable={editingSection === 'education'}
-            />
-            <TextInput
-              style={[styles.input, styles.dateInput]}
-              value={entry.endDate}
-              onChangeText={(text) => updateExperienceEntry(entry.id, 'endDate', text)}
-               placeholderTextColor="#666"
-              placeholder="End Date"
-              editable={editingSection === 'education'}
-            />
-          </View>
-          
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={entry.description}
-            onChangeText={(text) => updateExperienceEntry(entry.id, 'description', text)}
-             placeholderTextColor="#666"
-            placeholder="Job Description"
-            multiline
-            numberOfLines={4}
-            editable={editingSection === 'education'}
-          />
-        </View>
-      ))}
+      {experienceEntries.map((entry) => renderExperienceEntry(entry))}
 
       {editingSection === 'education' && (
         <TouchableOpacity
@@ -938,6 +998,16 @@ const ProfileScreen = () => {
         <Ionicons name="log-out-outline" size={20} color="#fff" />
         <Text style={styles.logoutButtonText}>Logout</Text>
       </TouchableOpacity>
+
+      {showDatePicker && (
+        <DateTimePicker
+          value={selectedDate}
+          mode="date"
+          display="default"
+          onChange={onDateChange}
+          maximumDate={new Date()}
+        />
+      )}
     </ScrollView>
   );
 };
@@ -1239,6 +1309,18 @@ const styles = StyleSheet.create({
   },
   dateInput: {
     flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    height: 48,
+  },
+  dateText: {
+    fontSize: 16,
+    color: '#2d3436',
+  },
+  placeholderText: {
+    color: '#666',
   },
   addButton: {
     flexDirection: 'row',

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from 'react-native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Job } from '../types';
 import { useAppDispatch, useAppSelector } from '../redux/store';
 import { saveJobToApi, unsaveJobFromApi, fetchSavedJobs } from '../redux/jobsSlice';
@@ -88,14 +88,16 @@ export default function JobCard({ job, ...props }: Props) {
       >
         <View style={styles.header}>
           <View style={styles.companyInfo}>
-            <Image 
-              source={{ uri: job.company.logo }} 
-              style={styles.companyLogo} 
-            />
+            <View style={styles.logoContainer}>
+              <Image 
+                source={{ uri: job.company.logo }} 
+                style={styles.companyLogo} 
+              />
+            </View>
             <View style={styles.titleContainer}>
               <Text style={styles.title}>{job.title}</Text>
               <Text style={styles.company}>
-                {job.company?.userId?.name || 'Company Name'}
+                <Ionicons name="business" size={14} color="#666" /> {job.company?.userId?.name || 'Company Name'}
               </Text>
             </View>
           </View>
@@ -104,29 +106,54 @@ export default function JobCard({ job, ...props }: Props) {
               <Ionicons 
                 name={isSaved ? "bookmark" : "bookmark-outline"}
                 size={24} 
-                color={isSaved ? "#1dbf73" : "#666"} 
+                color={isSaved ? "#ff3b30" : "#666"} 
               />
             </TouchableOpacity>
           )}
         </View>
 
-        <Text style={styles.location}>{job.location || 'Location not specified'}</Text>
-        <Text style={styles.jobType}>{job.jobType || 'Not specified'}</Text>
-        <Text style={styles.salary}>
-          {job.salaryRange ? 
-            `₹${job.salaryRange.min.toLocaleString()} - ₹${job.salaryRange.max.toLocaleString()} /year` :
-            'Salary not disclosed'
-          }
-        </Text>
-        <Text style={styles.experience}>
-          {job.experienceRange ? 
-            `Experience: ${job.experienceRange.min}-${job.experienceRange.max} years` :
-            'Experience: Not specified'
-          }
-        </Text>
+        <View style={styles.detailsContainer}>
+          <View style={styles.detailRow}>
+            <View style={styles.detailItem}>
+              <Ionicons name="location" size={16} color="#666" />
+              <Text style={styles.location}>{job.location || 'Location not specified'}</Text>
+            </View>
+            <View style={styles.detailItem}>
+              <MaterialCommunityIcons name="clock-outline" size={16} color="#666" />
+              <Text style={styles.jobType}>{job.jobType || 'Not specified'}</Text>
+            </View>
+          </View>
+
+          <View style={styles.detailRow}>
+            <View style={styles.detailItem}>
+              <MaterialCommunityIcons name="currency-inr" size={16} color="#1dbf73" />
+              <Text style={styles.salary}>
+                {job.salaryRange ? 
+                  `${job.salaryRange.min.toLocaleString()} - ${job.salaryRange.max.toLocaleString()} /year` :
+                  'Salary not disclosed'
+                }
+              </Text>
+            </View>
+            <View style={styles.detailItem}>
+              <MaterialCommunityIcons name="badge-account" size={16} color="#666" />
+              <Text style={styles.experience}>
+                {job.experienceRange ? 
+                  `${job.experienceRange.min}-${job.experienceRange.max} years` :
+                  'Not specified'
+                }
+              </Text>
+            </View>
+          </View>
+        </View>
 
         {props.showStatus && appliedJob?.status && (
           <View style={[styles.statusContainer, styles[appliedJob.status]]}>
+            <MaterialCommunityIcons 
+              name={appliedJob.status === 'shortlisted' ? 'check-circle' : 
+                   appliedJob.status === 'rejected' ? 'close-circle' : 'clock-outline'} 
+              size={18} 
+              color="#fff" 
+            />
             <Text style={styles.statusText}>
               {appliedJob.status.charAt(0).toUpperCase() + appliedJob.status.slice(1)}
             </Text>
@@ -138,17 +165,17 @@ export default function JobCard({ job, ...props }: Props) {
             style={styles.applyButton}
             onPress={handleApply}
           >
+            <Ionicons name="paper-plane" size={18} color="#fff" />
             <Text style={styles.applyButtonText}>Apply Now</Text>
           </TouchableOpacity>
         )}
 
         {isApplied && !props.showStatus && (     
           <View style={styles.appliedBadge}>
-            <Text style={styles.appliedText}>Applied Job</Text>
+            <Ionicons name="checkmark-circle" size={18} color="#fff" />
+            <Text style={styles.appliedText}>Applied</Text>
           </View>
         )}
-
-  
       </TouchableOpacity>
     </View>
   );
@@ -157,15 +184,17 @@ export default function JobCard({ job, ...props }: Props) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    margin:10
+    shadowRadius: 8,
+    elevation: 5,
+    margin: 15,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
   cardContent: {
     flex: 1,
@@ -177,23 +206,31 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '600',
-    flex: 1,
-    marginRight: 8,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 4,
   },
   saveIconButton: {
+    padding: 4,
+  },
+  icon: {
     padding: 4,
   },
   companyInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex:1,
+    flex: 1,
+  },
+  logoContainer: {
+    backgroundColor: '#f5f5f5',
+    padding: 8,
+    borderRadius: 12,
+    marginRight: 12,
   },
   companyLogo: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
-    marginRight: 12,
+    width: 45,
+    height: 45,
+    borderRadius: 10,
   },
   titleContainer: {
     flex: 1,
@@ -201,39 +238,54 @@ const styles = StyleSheet.create({
   company: {
     fontSize: 14,
     color: '#666',
-    marginTop: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  detailsContainer: {
+    marginTop: 12,
+    gap: 8,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   location: {
     fontSize: 14,
     color: '#666',
-    marginTop: 4,
   },
   jobType: {
     fontSize: 14,
     color: '#007AFF',
-    backgroundColor: '#E5F1FF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    alignSelf: 'flex-start',
-    marginTop: 8,
   },
   salary: {
     fontSize: 14,
     color: '#1dbf73',
-    marginTop: 4,
+    fontWeight: '600',
   },
   experience: {
     fontSize: 14,
     color: '#666',
-    marginTop: 8,
   },
   applyButton: {
     backgroundColor: '#1dbf73',
-    padding: 12,
-    borderRadius: 8,
-    marginTop: 12,
+    padding: 14,
+    borderRadius: 12,
+    marginTop: 16,
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    gap: 8,
+    shadowColor: '#1dbf73',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   applyButtonText: {
     color: '#fff',
@@ -246,6 +298,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginTop: 12,
     alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
   },
   appliedText: {
     color: '#fff',
@@ -257,6 +311,13 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginTop: 12,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    flexDirection: 'row',
+    gap: 6,
   },
   pending: {
     backgroundColor: '#FF9500',

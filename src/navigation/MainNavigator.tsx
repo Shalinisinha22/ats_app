@@ -360,7 +360,7 @@ const TabNavigator = () => {
     >
       <Tab.Screen name="BrowseJobs" component={BrowseJobsScreen} options={{ 
         title: '', 
-        tabBarLabel: 'Home'  // Keep "Home" only in the bottom tab
+        tabBarLabel: 'Home'  
       }} />
       <Tab.Screen name="SavedJobs" component={SavedJobsScreen} options={{ title: 'Saved' }} />
       <Tab.Screen name="AppliedJobs" component={AppliedJobsScreen} options={{ title: 'Applied' }} />

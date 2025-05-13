@@ -629,9 +629,12 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                       setShowStartDate(true);
                     }}
                   >
-                    <Text style={entry.startDate ? styles.dateText : styles.placeholderText}>
-                      {entry.startDate || 'Start Date'}
-                    </Text>
+                    <View style={styles.dateInputContent}>
+                      <Text style={entry.startDate ? styles.dateText : styles.placeholderText}>
+                        {entry.startDate || 'Start Date'}
+                      </Text>
+                      <Ionicons name="calendar-outline" size={20} color="#666" />
+                    </View>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.input, styles.dateInput]}
@@ -640,9 +643,12 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                       setShowEndDate(true);
                     }}
                   >
-                    <Text style={entry.endDate ? styles.dateText : styles.placeholderText}>
-                      {entry.endDate || 'End Date'}
-                    </Text>
+                    <View style={styles.dateInputContent}>
+                      <Text style={entry.endDate ? styles.dateText : styles.placeholderText}>
+                        {entry.endDate || 'End Date'}
+                      </Text>
+                      <Ionicons name="calendar-outline" size={20} color="#666" />
+                    </View>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -685,9 +691,12 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                       setShowStartDate(true);
                     }}
                   >
-                    <Text style={entry.startDate ? styles.dateText : styles.placeholderText}>
-                      {entry.startDate || 'Start Date'}
-                    </Text>
+                    <View style={styles.dateInputContent}>
+                      <Text style={entry.startDate ? styles.dateText : styles.placeholderText}>
+                        {entry.startDate || 'Start Date'}
+                      </Text>
+                      <Ionicons name="calendar-outline" size={20} color="#666" />
+                    </View>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.input, styles.dateInput]}
@@ -696,9 +705,12 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                       setShowEndDate(true);
                     }}
                   >
-                    <Text style={entry.endDate ? styles.dateText : styles.placeholderText}>
-                      {entry.endDate || 'End Date'}
-                    </Text>
+                    <View style={styles.dateInputContent}>
+                      <Text style={entry.endDate ? styles.dateText : styles.placeholderText}>
+                        {entry.endDate || 'End Date'}
+                      </Text>
+                      <Ionicons name="calendar-outline" size={20} color="#666" />
+                    </View>
                   </TouchableOpacity>
                 </View>
                 <TextInput
@@ -1139,16 +1151,28 @@ const styles = StyleSheet.create({
   },
   dateText: {
     color: '#212529',
-    fontSize: 16,
+    fontSize: 12,
+    flex: 1, 
+    marginRight: 8, 
   },
   placeholderText: {
     color: '#6c757d',
-    fontSize: 16,
+    fontSize: 12,
+    flex: 1, 
+    marginRight: 8, 
   },
   dateInput: {
     flex: 0.48,
-    justifyContent: 'center',
     height: 48,
+    padding: 0, 
+  },
+  dateInputContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   labelContainer: {
     flexDirection: 'row',
