@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Image, TouchableOpacity, StyleSheet, Text, Dimensions, Modal, ScrollView, Platform,Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Image, TouchableOpacity, StyleSheet, Text, Dimensions, Modal, ScrollView, Platform, Alert } from 'react-native';
 import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList, DrawerContentComponentProps } from '@react-navigation/drawer';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -18,6 +18,7 @@ import { RootState } from '../redux/store';
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
 import { useAppDispatch } from '../redux/store';
 import { logout } from '../redux/authSlice';
+import NotificationService from '../services/NotificationService';
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
 const Tab = createBottomTabNavigator<DrawerParamList>();
@@ -72,17 +73,15 @@ const CustomDrawerContent = (props: DrawerContentComponentProps) => {
       <View style={styles.drawerContent}>
         <DrawerItemList {...props} />
       </View>
-   {/* Add Logout Button */}
-   <TouchableOpacity
-          style={styles.drawerButton}
-          onPress={handleLogout}
-        >
-          <View style={[styles.drawerIcon, { borderColor: '#ff3b30' }]}>
-            <Ionicons name="log-out-outline" size={22} color="#ff3b30" />
-          </View>
-          <Text style={[styles.drawerButtonText, { color: '#ff3b30' }]}>Logout</Text>
-        </TouchableOpacity>
-
+      <TouchableOpacity
+        style={styles.drawerButton}
+        onPress={handleLogout}
+      >
+        <View style={[styles.drawerIcon, { borderColor: '#ff3b30' }]}>
+          <Ionicons name="log-out-outline" size={22} color="#ff3b30" />
+        </View>
+        <Text style={[styles.drawerButtonText, { color: '#ff3b30' }]}>Logout</Text>
+      </TouchableOpacity>
     </DrawerContentScrollView>
   );
 };
@@ -97,209 +96,56 @@ const HeaderLeft = () => (
   </View>
 );
 
-// const HeaderRight = ({ navigation }: { navigation: any }) => {
-//   const [showNotifications, setShowNotifications] = React.useState(false);
-
-//   const mockNotifications = [
-//     {
-//       id: '1',
-//       title: 'Application Status Update',
-//       message: 'Your application for Senior Software Engineer at TechCorp India has been shortlisted.',
-//       timestamp: '2 hours ago',
-//       read: false,
-//       type: 'shortlist',
-//     },
-//     {
-//       id: '2',
-//       title: 'New Job Recommendation',
-//       message: 'We found a new job matching your profile: Full Stack Developer at Innovate Solutions',
-//       timestamp: '1 day ago',
-//       read: false,
-//       type: 'system',
-//     },
-//   ];
-
-//   return (
-//     <View style={styles.headerRight}>
-//       <TouchableOpacity 
-//         onPress={() => setShowNotifications(true)}
-//         style={styles.headerButton}
-//       >
-//         <View style={styles.notificationBadge}>
-//           <Text style={styles.badgeText}>2</Text>
-//         </View>
-//         <Ionicons name="notifications-outline" size={24} color="#fff" />
-//       </TouchableOpacity>
-//       <TouchableOpacity 
-//         onPress={() => navigation.openDrawer()}
-//         style={styles.headerButton}
-//       >
-//         <Ionicons name="menu" size={24} color="#fff" />
-//       </TouchableOpacity>
-
-//       <Modal
-//         visible={showNotifications}
-//         transparent={true}
-//         animationType="fade"
-//         onRequestClose={() => setShowNotifications(false)}
-//       >
-//         <TouchableOpacity
-//           style={styles.modalOverlay}
-//           activeOpacity={1}
-//           onPress={() => setShowNotifications(false)}
-//         >
-//           <View style={styles.notificationModal}>
-//             <View style={styles.modalHeader}>
-//               <Text style={styles.modalTitle}>Notifications</Text>
-//               <TouchableOpacity onPress={() => setShowNotifications(false)}>
-//                 <Ionicons name="close" size={24} color="#333" />
-//               </TouchableOpacity>
-//             </View>
-//             <ScrollView style={styles.notificationList}>
-//               {mockNotifications.map(notification => (
-//                 <TouchableOpacity
-//                   key={notification.id}
-//                   style={styles.notificationItem}
-//                   onPress={() => {
-//                     setShowNotifications(false);
-//                     navigation.navigate('Notifications');
-//                   }}
-//                 >
-//                   <View style={[styles.notificationIcon, { backgroundColor: notification.type === 'shortlist' ? '#34C759' : '#007AFF' }]}>
-//                     <Ionicons
-//                       name={notification.type === 'shortlist' ? 'checkmark-circle-outline' : 'notifications-outline'}
-//                       size={20}
-//                       color="#fff"
-//                     />
-//                   </View>
-//                   <View style={styles.notificationContent}>
-//                     <Text style={styles.notificationTitle}>{notification.title}</Text>
-//                     <Text style={styles.notificationMessage} numberOfLines={2}>
-//                       {notification.message}
-//                     </Text>
-//                     <Text style={styles.notificationTime}>{notification.timestamp}</Text>
-//                   </View>
-//                 </TouchableOpacity>
-//               ))}
-//             </ScrollView>
-//             <TouchableOpacity
-//               style={styles.viewAllButton}
-//               onPress={() => {
-//                 setShowNotifications(false);
-//                 navigation.navigate('Notifications');
-//               }}
-//             >
-//               <Text style={styles.viewAllText}>View All Notifications</Text>
-//             </TouchableOpacity>
-//           </View>
-//         </TouchableOpacity>
-//       </Modal>
-//     </View>
-//   );
-// };
-
-
 const HeaderRight = ({ navigation }: { navigation: any }) => {
-  const isDrawer = navigation.getState().type === 'drawer';
-  const [showNotifications, setShowNotifications] = React.useState(false);
+  const [notifications, setNotifications] = useState<StoredNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  const mockNotifications = [
-    {
-      id: '1',
-      title: 'Application Status Update',
-      message: 'Your application for Senior Software Engineer at TechCorp India has been shortlisted.',
-      timestamp: '2 hours ago',
-      read: false,
-      type: 'shortlist',
-    },
-    {
-      id: '2',
-      title: 'New Job Recommendation',
-      message: 'We found a new job matching your profile: Full Stack Developer at Innovate Solutions',
-      timestamp: '1 day ago',
-      read: false,
-      type: 'system',
-    },
-  ];
+  useEffect(() => {
+    // Load notifications when component mounts
+    const loadNotifications = async () => {
+      const storedNotifications = await NotificationService.getNotifications();
+      setNotifications(storedNotifications);
+      setUnreadCount(storedNotifications.filter(n => !n.read).length);
+    };
+
+    loadNotifications();
+
+    // Listen for new notifications
+    const unsubscribe = NotificationService.onMessageReceived((notification) => {
+      console.log('New notification received:', notification);
+      loadNotifications(); // Reload notifications when new one arrives
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleNotificationPress = () => {
+    navigation.navigate('Notifications');
+  };
+
   return (
     <View style={styles.headerRight}>
-     <TouchableOpacity 
-        onPress={() => setShowNotifications(true)}
+      <TouchableOpacity 
+        onPress={handleNotificationPress}
         style={styles.headerButton}
       >
-        <View style={styles.notificationBadge}>
-          <Text style={styles.badgeText}>2</Text>
-        </View>
+        {unreadCount > 0 && (
+          <View style={styles.notificationBadge}>
+            <Text style={styles.badgeText}>{unreadCount}</Text>
+          </View>
+        )}
         <Ionicons name="notifications-outline" size={24} color="#fff" />
       </TouchableOpacity>
-      {/* Remove the !isDrawer condition to always show menu icon */}
       <TouchableOpacity 
         onPress={() => navigation.openDrawer()}
         style={styles.headerButton}
       >
         <Ionicons name="menu" size={24} color="#fff" />
       </TouchableOpacity>
-   
-      <Modal
-        visible={showNotifications}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowNotifications(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setShowNotifications(false)}
-        >
-          <View style={styles.notificationModal}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Notifications</Text>
-              <TouchableOpacity onPress={() => setShowNotifications(false)}>
-                <Ionicons name="close" size={24} color="#333" />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.notificationList}>
-              {mockNotifications.map(notification => (
-                <TouchableOpacity
-                  key={notification.id}
-                  style={styles.notificationItem}
-                  onPress={() => {
-                    setShowNotifications(false);
-                    navigation.navigate('Notifications');
-                  }}
-                >
-                  <View style={[styles.notificationIcon, { backgroundColor: notification.type === 'shortlist' ? '#34C759' : '#007AFF' }]}>
-                    <Ionicons
-                      name={notification.type === 'shortlist' ? 'checkmark-circle-outline' : 'notifications-outline'}
-                      size={20}
-                      color="#fff"
-                    />
-                  </View>
-                  <View style={styles.notificationContent}>
-                    <Text style={styles.notificationTitle}>{notification.title}</Text>
-                    <Text style={styles.notificationMessage} numberOfLines={2}>
-                      {notification.message}
-                    </Text>
-                    <Text style={styles.notificationTime}>{notification.timestamp}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <TouchableOpacity
-              style={styles.viewAllButton}
-              onPress={() => {
-                setShowNotifications(false);
-                navigation.navigate('Notifications');
-              }}
-            >
-              <Text style={styles.viewAllText}>View All Notifications</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </View>
   );
 };
+
 const TabNavigator = () => {
   return (
     <Tab.Navigator
@@ -421,6 +267,48 @@ const MainStack = () => {
 };
 
 export const MainNavigator = () => {
+  useEffect(() => {
+    const setupNotifications = async () => {
+      const hasPermission = await NotificationService.requestUserPermission();
+      
+      if (hasPermission) {
+        const token = await NotificationService.getFCMToken();
+        // Send token to your backend
+        if (token) {
+          // Store token in your backend/redux
+          console.log('FCM Token:', token);
+        }
+
+        // Handle foreground messages
+        const unsubscribeMessage = await NotificationService.onMessageReceived(
+          (remoteMessage) => {
+            console.log('Received foreground message:', remoteMessage);
+            // Update notification badge count
+            // You can dispatch an action to update your redux store
+          }
+        );
+
+        // Handle notification taps
+        const unsubscribeNotificationTap = await NotificationService.onNotificationTap(
+          (remoteMessage) => {
+            console.log('Notification tapped:', remoteMessage);
+            // Navigate to appropriate screen based on notification data
+            if (remoteMessage.data?.screen) {
+              navigation.navigate(remoteMessage.data.screen, remoteMessage.data.params);
+            }
+          }
+        );
+
+        return () => {
+          unsubscribeMessage();
+          unsubscribeNotificationTap();
+        };
+      }
+    };
+
+    setupNotifications();
+  }, []);
+
   return (
     <Drawer.Navigator
       drawerContent={(props) => <CustomDrawerContent {...props} />}

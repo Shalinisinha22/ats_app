@@ -1,184 +1,142 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  RefreshControl
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import NotificationService from '../../services/NotificationService';
+import { StoredNotification } from '../../types/notification';
+import { format } from 'date-fns';
 
-type Notification = {
-  id: string;
-  title: string;
-  message: string;
-  timestamp: string;
-  read: boolean;
-  type: 'application' | 'shortlist' | 'system';
-};
+const NotificationsScreen = () => {
+  const [notifications, setNotifications] = useState<StoredNotification[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
-// Mock notifications data
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    title: 'Application Status Update',
-    message: 'Your application for Senior Software Engineer at TechCorp India has been shortlisted.',
-    timestamp: '2 hours ago',
-    read: false,
-    type: 'shortlist',
-  },
-  {
-    id: '2',
-    title: 'New Job Recommendation',
-    message: 'We found a new job matching your profile: Full Stack Developer at Innovate Solutions',
-    timestamp: '1 day ago',
-    read: false,
-    type: 'system',
-  },
-];
+  const loadNotifications = async () => {
+    const storedNotifications = await NotificationService.getNotifications();
+    setNotifications(storedNotifications);
+  };
 
-export default function NotificationsScreen() {
-  const getIcon = (type: Notification['type']) => {
-    switch (type) {
-      case 'application':
-        return 'briefcase-outline';
-      case 'shortlist':
-        return 'checkmark-circle-outline';
-      case 'system':
-        return 'notifications-outline';
-      default:
-        return 'notifications-outline';
+  useEffect(() => {
+    loadNotifications();
+  }, []);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadNotifications();
+    setRefreshing(false);
+  };
+
+  const handleNotificationPress = async (notification: StoredNotification) => {
+    if (!notification.read) {
+      await NotificationService.markAsRead(notification.id);
+      loadNotifications();
     }
   };
 
-  const getIconColor = (type: Notification['type']) => {
-    switch (type) {
-      case 'application':
-        return '#007AFF';
-      case 'shortlist':
-        return '#34C759';
-      case 'system':
-        return '#FF9500';
-      default:
-        return '#666';
-    }
-  };
+  const renderNotification = ({ item }: { item: StoredNotification }) => (
+    <TouchableOpacity
+      style={[styles.notificationItem, !item.read && styles.unreadItem]}
+      onPress={() => handleNotificationPress(item)}
+    >
+      <View style={[styles.notificationIcon, { backgroundColor: '#1dbf73' }]}>
+        <Ionicons name="notifications-outline" size={20} color="#fff" />
+      </View>
+      <View style={styles.notificationContent}>
+        <Text style={styles.title}>{item.title}</Text>
+        <Text style={styles.body} numberOfLines={2}>
+          {item.body}
+        </Text>
+        <Text style={styles.timestamp}>
+          {format(new Date(item.timestamp), 'MMM dd, yyyy HH:mm')}
+        </Text>
+      </View>
+      {!item.read && <View style={styles.unreadDot} />}
+    </TouchableOpacity>
+  );
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.notificationsList}>
-        {mockNotifications.map(notification => (
-          <TouchableOpacity
-            key={notification.id}
-            style={[
-              styles.notificationCard,
-              !notification.read && styles.unreadCard
-            ]}
-          >
-            <View style={[
-              styles.iconContainer,
-              { backgroundColor: getIconColor(notification.type) + '15' }
-            ]}>
-              <Ionicons
-                name={getIcon(notification.type)}
-                size={24}
-                color={getIconColor(notification.type)}
-              />
-            </View>
-            <View style={styles.contentContainer}>
-              <Text style={styles.title}>{notification.title}</Text>
-              <Text style={styles.message}>{notification.message}</Text>
-              <Text style={styles.timestamp}>{notification.timestamp}</Text>
-            </View>
-            {!notification.read && <View style={styles.unreadDot} />}
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-      {mockNotifications.length === 0 && (
-        <View style={styles.emptyState}>
-          <Ionicons name="notifications-off-outline" size={48} color="#666" />
-          <Text style={styles.emptyStateText}>No notifications yet</Text>
-          <Text style={styles.emptyStateSubtext}>
-            We'll notify you when there are updates about your job applications
-          </Text>
-        </View>
-      )}
+      <FlatList
+        data={notifications}
+        renderItem={renderNotification}
+        keyExtractor={item => item.id}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        ListEmptyComponent={() => (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No notifications yet</Text>
+          </View>
+        )}
+      />
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8f9fa'
   },
-  notificationsList: {
-    padding: 16,
-  },
-  notificationCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+  notificationItem: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  unreadCard: {
+    padding: 16,
     backgroundColor: '#fff',
-    borderLeftWidth: 4,
-    borderLeftColor: '#1dbf73',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    alignItems: 'center'
   },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  unreadItem: {
+    backgroundColor: '#f0f9ff'
+  },
+  notificationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 12
   },
-  contentContainer: {
-    flex: 1,
+  notificationContent: {
+    flex: 1
   },
   title: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
+    color: '#212529',
+    marginBottom: 4
   },
-  message: {
+  body: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-    lineHeight: 20,
+    color: '#495057',
+    marginBottom: 4
   },
   timestamp: {
     fontSize: 12,
-    color: '#999',
+    color: '#6c757d'
   },
   unreadDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: '#1dbf73',
-    marginLeft: 8,
-    marginTop: 8,
+    marginLeft: 8
   },
-  emptyState: {
+  emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 20
   },
-  emptyStateText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    paddingHorizontal: 32,
-  },
+  emptyText: {
+    fontSize: 16,
+    color: '#6c757d'
+  }
 });
+
+export default NotificationsScreen;

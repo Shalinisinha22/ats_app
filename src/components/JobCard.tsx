@@ -106,7 +106,7 @@ export default function JobCard({ job, ...props }: Props) {
               <Ionicons 
                 name={isSaved ? "bookmark" : "bookmark-outline"}
                 size={24} 
-                color={isSaved ? "#ff3b30" : "#666"} 
+                color={isSaved ? "#5e5e5e" : "#666"} 
               />
             </TouchableOpacity>
           )}

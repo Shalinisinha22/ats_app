@@ -16,6 +16,9 @@
       "supportsTablet": true,
       "runtimeVersion": {
         "policy": "appVersion"
+      },
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"]
       }
     },
     "android": {
@@ -24,11 +27,23 @@
         "backgroundColor": "#ffffff"
       },
       "permissions": [
-        "INTERNET",
-        "INTERNET"
+        "NOTIFICATIONS"
       ],
       "package": "com.raja7252725272528752.apps",
-      "runtimeVersion": "1.0.0"
+      "runtimeVersion": "1.0.0",
+      "googleServicesFile": "./google-services.json",
+      "useNextNotificationsApi": true,
+      "notification": {
+        "icon": "./assets/icon.png",
+        "color": "#ffffff",
+        "androidMode": "default",
+        "androidCollapsedTitle": "New Notification",
+        "iosDisplayInForeground": true,
+        "androidImportance": "high",
+        "androidPriority": "high",
+        "androidShowBadge": true,
+        "androidVibrate": true
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -43,7 +58,24 @@
       "url": "https://u.expo.dev/ce9baffd-b755-4d11-ab2f-fe6ab81caafe"
     },
     "plugins": [
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#ffffff",
+          "mode": "production",
+          "androidMode": "default",
+          "androidCollapsedTitle": "New Notification",
+          "androidImportance": "high",
+          "androidColor": "#1dbf73",
+          "androidChannelId": "default",
+          "androidShowWhen": true,
+          "androidPriority": "high",
+          "androidVibrate": [0, 250, 250, 250],
+          "androidSticky": false
+        }
+      ]
     ]
   }
 }
