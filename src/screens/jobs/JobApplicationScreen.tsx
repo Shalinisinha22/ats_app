@@ -21,6 +21,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { nanoid } from '@reduxjs/toolkit';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Tooltip from 'react-native-walkthrough-tooltip';
+import { format } from 'date-fns';
+import { uploadToCloudinary } from '../../utils/cloudinary';
 
 type EducationEntry = {
   id: string;
@@ -64,7 +66,7 @@ type FormData = {
   currentCTC: string;
   expectedCTC: string;
   reasonForJobChange: string;
-  projectDescription: string;
+  achievement: string;
   termsAccepted: boolean;
 };
 const EDUCATION_OPTIONS = [
@@ -83,6 +85,9 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
   const userProfile = useAppSelector((state: RootState) => state.auth.userProfile);
   const [resumeFile, setResumeFile] = useState<DocumentPicker.DocumentResult | null>(userProfile?.resume || null);
 
+
+  console.log(userProfile)
+
   const dispatch = useAppDispatch();
   const {
     control,
@@ -99,7 +104,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
       summary: userProfile?.summary || '',
       phone: user?.phone || '',
       currentLocation: userProfile?.currentLocation || '',
-      preferredWorkLocation: userProfile?.preferredWorkLocation || '',
+      // preferredWorkLocation: userProfile?.preferredWorkLocation || '',
       totalExperience: '',
       relevantExperience: '',
       currentCompany: userProfile?.currentCompany || '',
@@ -108,8 +113,10 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
       currentCTC: userProfile?.currentCTC?.toString() || '',
       expectedCTC: userProfile?.expectedCTC?.toString() || '',
       reasonForJobChange: userProfile?.reasonForJobChange || '',
-      projectDescription: '',
-      termsAccepted: false
+      achievement: userProfile?.achievement || '',
+      termsAccepted: false,
+      education:userProfile?.education || [],
+      experience:userProfile?.experience || [],
     },
     mode: 'onChange',
     // rules: {
@@ -123,7 +130,8 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
     //   termsAccepted: { required: 'You must accept the terms' }
     // }
   });
-  
+    const [isUploading, setIsUploading] = useState(false);
+    const [isUploadingResume, setIsUploadingResume] = useState(false);
   const [showStartDate, setShowStartDate] = useState(false);
   const [showEndDate, setShowEndDate] = useState(false);
   const [activeDateField, setActiveDateField] = useState({ id: '', type: '', field: '' });
@@ -155,15 +163,24 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
 
   const formValues = watch();
 
-  const [educationEntries, setEducationEntries] = useState<EducationEntry[]>([
-    {
+  const [educationEntries, setEducationEntries] = useState<EducationEntry[]>(() => {
+    if (userProfile?.education && userProfile.education.length > 0) {
+      return userProfile.education.map(edu => ({
+        id: nanoid(),
+        degree: edu.degree || '',
+        institution: edu.institution || '',
+        startDate: edu.startDate ? new Date(edu.startDate).toISOString().split('T')[0] : '',
+        endDate: edu.endDate ? new Date(edu.endDate).toISOString().split('T')[0] : '',
+      }));
+    }
+    return [{
       id: nanoid(),
       degree: '',
       institution: '',
       startDate: '',
       endDate: '',
-    },
-  ]);
+    }];
+  });
 
   const addEducationEntry = () => {
     setEducationEntries([
@@ -189,16 +206,26 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
       )
     );
   };
-  const [experienceEntries, setExperienceEntries] = useState<ExperienceEntry[]>([
-    {
+  const [experienceEntries, setExperienceEntries] = useState<ExperienceEntry[]>(() => {
+    if (userProfile?.experience && userProfile.experience.length > 0) {
+      return userProfile.experience.map(exp => ({
+        id: nanoid(),
+        companyName: exp.company || '',
+        jobTitle: exp.title || '',
+        startDate: exp.startDate ? format(new Date(exp.startDate), 'yyyy-MM-dd') : '',
+        endDate: exp.endDate ? format(new Date(exp.endDate), 'yyyy-MM-dd') : '',
+        description: exp.description || ''
+      }));
+    }
+    return [{
       id: nanoid(),
       companyName: '',
       jobTitle: '',
       startDate: '',
       endDate: '',
-      description: '',
-    },
-  ]);
+      description: ''
+    }];
+  });
 
   const addExperienceEntry = () => {
     setExperienceEntries([
@@ -236,14 +263,14 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
       // Validate fields based on current step
       switch (step) {
         case 1:
-          if (!currentValues.email || !currentValues.fullname || !currentValues.headline || !currentValues.summary) {
-            Alert.alert('Error', 'Please fill in all fields in Personal Information');
+          if (!currentValues.email || !currentValues.fullname) {
+            Alert.alert('Error', 'Please fill in all required fields in Personal Information');
             hasError = true;
           }
           break;
   
         case 2:
-          if (!currentValues.phone || !currentValues.currentLocation || !currentValues.preferredWorkLocation) {
+          if (!currentValues.phone || !currentValues.currentLocation) {
             Alert.alert('Error', 'Please fill in all contact and location details');
             hasError = true;
           }
@@ -285,21 +312,50 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
           return;
         }
 
-        const extension = fileInfo.name.split('.').pop() || 'pdf';
-
-        setResumeFile(fileInfo);
-
-        Alert.alert('Success', 'Resume uploaded successfully');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to upload resume');
-    }
+       try {
+              // Upload to Cloudinary
+              const cloudinaryResponse = await uploadToCloudinary(fileInfo.uri, 'raw');
+              console.log('Resume upload response:', cloudinaryResponse);
+    
+              if (cloudinaryResponse) {
+                setResumeFile({
+                  url: cloudinaryResponse.secure_url,
+                  name: fileInfo.name,
+                  extension:"pdf",
+                });
+                
+                Alert.alert('Success', 'Resume uploaded successfully');
+              }
+            } catch (error: any) {
+              console.error('Resume upload error:', error);
+              Alert.alert(
+                'Error',
+                error?.message || 'Failed to upload resume. Please try again.'
+              );
+            } finally {
+              setIsUploadingResume(false);
+            }
+          }
+        } catch (error: any) {
+          console.error('Document picker error:', error);
+          Alert.alert('Error', 'Failed to pick resume');
+        }
   };
 
   const onSubmit = async (data: FormData) => {
     try {
       setIsSubmitting(true);
 
+        if (!data.termsAccepted) {
+      Alert.alert(
+        'Terms & Conditions Required',
+        'Please accept the terms and conditions to proceed with your application.'
+      );
+      setIsSubmitting(false);
+      return;
+    }
+
+ 
       // Validate resume
       if (!resumeFile) {
         Alert.alert('Error', 'Please upload your resume');
@@ -307,64 +363,68 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
         return;
       }
 
-      if (!data.termsAccepted) {
-        Alert.alert('Error', 'Please accept the terms and conditions');
-        setIsSubmitting(false);
-        return;
-      }
+  
 
       console.log('Submitting application...', data); 
 
       const applicationData = {
         jobId: job._id,
-        status: 'pending',
-        appliedDate: new Date().toISOString(),
         email: data.email,
-        fullName: data.fullname,
+        name: data.fullname,
         headline: data.headline,
         summary: data.summary,
         phone: data.phone,
         currentLocation: data.currentLocation,
-        preferredWorkLocation: data.preferredWorkLocation,
         education: educationEntries,
         experience: experienceEntries,
-        currentCompany: data.currentCompany,
-        currentJobTitle: data.currentJobTitle,
-        totalExperience: data.totalExperience,
-        relevantExperience: data.relevantExperience,
         noticePeriod: data.noticePeriod,
         currentCTC: data.currentCTC,
         expectedCTC: data.expectedCTC,
         reasonForJobChange: data.reasonForJobChange,
-        projectDescription: data.projectDescription,
         resume: {
-          url: resumeFile.uri, // Change from url to uri
+          url: resumeFile.url, 
           name: resumeFile.name,
-          extension: "pdf"
+          extension: resumeFile.extension,
         }
       };
 
-      console.log('Application data:', applicationData); // Add this for debugging
+      console.log('Application data:', applicationData); 
 
-      // const result = await dispatch(applyJobToApi({ job, applicationData })).unwrap();
-      // console.log('API Response:', result); // Add this for debugging
+      const result = await dispatch(applyJobToApi({ job, applicationData })).unwrap();
+      console.log('API Response:', result); // Add this for debugging
 
-      // await dispatch(fetchAppliedJobs()).unwrap();
+      await dispatch(fetchAppliedJobs()).unwrap();
 
-      // Alert.alert(
-      //   'Success!',
-      //   'Your job application has been submitted successfully.',
-      //   [
-      //     {
-      //       text: 'View Applied Jobs',
-      //       onPress: () => navigation.replace('AppliedJobs'),
-      //     },
-      //     {
-      //       text: 'Browse More Jobs',
-      //       onPress: () => navigation.replace('BrowseJobs'),
-      //     },
-      //   ]
-      // );
+       Alert.alert(
+      'Success!',
+      'Your job application has been submitted successfully.',
+      [
+        {
+          text: 'OK',
+          onPress: () => {
+            navigation.reset({
+              index: 0,
+              routes: [
+                { 
+                  name: 'MainStack',
+                  state: {
+                    routes: [
+                      {
+                        name: 'MainTabs',
+                        state: {
+                          routes: [{ name: 'AppliedJobs' }]
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            });
+          }
+        }
+      ]
+    );
+      
     } catch (error: any) {
       console.error('Application submission error:', error); // Add this for debugging
       Alert.alert(
@@ -463,7 +523,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
             <InputLabel 
               label="Professional Headline"
               tooltip="A brief title that describes your professional identity (e.g., 'Senior Software Engineer')"
-              required
+      
               showToolTip={true}
             />
             <Controller
@@ -483,7 +543,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
             <InputLabel 
               label="Professional Summary"
               tooltip="Provide a concise overview of your professional background"
-              required
+        
               showToolTip={true}
             />
             <Controller
@@ -556,12 +616,12 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                 />
               )}
             />
-            <InputLabel 
+            {/* <InputLabel 
               label="Preferred Work Location"
               required
               showToolTip={false}
-            />
-            <Controller
+            /> */}
+            {/* <Controller
               control={control}
               name="preferredWorkLocation"
               rules={{ required: 'Preferred location is required' }}
@@ -577,7 +637,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                   }}
                 />
               )}
-            />
+            /> */}
           </View>
         );
 
@@ -599,7 +659,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                 </View>
                 <InputLabel 
                   label="Degree/Certification"
-                  required
+               
                   showToolTip={false}
                 />
                 <TextInput
@@ -611,7 +671,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                 />
                 <InputLabel 
                   label="Institution Name"
-                  required
+            
                   showToolTip={false}
                 />
                 <TextInput
@@ -621,6 +681,12 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                   placeholder="Institution Name"
                   placeholderTextColor="#666"
                 />
+
+                  <InputLabel 
+                  label="Duration"
+                  tooltip="Period of study"
+                  showToolTip={false}
+                />
                 <View style={styles.dateContainer}>
                   <TouchableOpacity
                     style={[styles.input, styles.dateInput]}
@@ -629,6 +695,8 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                       setShowStartDate(true);
                     }}
                   >
+
+              
                     <View style={styles.dateInputContent}>
                       <Text style={entry.startDate ? styles.dateText : styles.placeholderText}>
                         {entry.startDate || 'Start Date'}
@@ -669,6 +737,12 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                     <Ionicons name="close-circle" size={24} color="#ff3b30" />
                   </TouchableOpacity>
                 </View>
+                
+                <InputLabel 
+                  label="Company Name"
+                  tooltip="Enter the name of the company you worked for"
+                  showToolTip={true}
+                />
                 <TextInput
                   style={styles.input}
                   value={entry.companyName}
@@ -676,12 +750,24 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                   placeholder="Company Name"
                   placeholderTextColor="#666"
                 />
+
+                <InputLabel 
+                  label="Job Title"
+                  tooltip="Your role or position in the company"
+                  showToolTip={true}
+                />
                 <TextInput
                   style={styles.input}
                   value={entry.jobTitle}
                   onChangeText={(text) => updateExperienceEntry(entry.id, 'jobTitle', text)}
                   placeholder="Job Title"
                   placeholderTextColor="#666"
+                />
+
+                <InputLabel 
+                  label="Employment Duration"
+                  tooltip="Period of employment"
+                  showToolTip={true}
                 />
                 <View style={styles.dateContainer}>
                   <TouchableOpacity
@@ -713,6 +799,12 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                     </View>
                   </TouchableOpacity>
                 </View>
+
+                <InputLabel 
+                  label="Job Description"
+                  tooltip="Describe your key responsibilities and achievements"
+                  showToolTip={true}
+                />
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   value={entry.description}
@@ -752,6 +844,13 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
         return (
           <View>
             <Text style={styles.stepTitle}>Step 4: Additional Details</Text>
+            
+            <InputLabel 
+              label="Notice Period"
+              tooltip="Current notice period in days"
+    
+              showToolTip={false}
+            />
             <Controller
               control={control}
               name="noticePeriod"
@@ -766,6 +865,13 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                   keyboardType="numeric"
                 />
               )}
+            />
+
+            <InputLabel 
+              label="Current CTC"
+              tooltip="Your current annual compensation"
+      
+              showToolTip={false}
             />
             <Controller
               control={control}
@@ -782,10 +888,17 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                 />
               )}
             />
+
+            <InputLabel 
+              label="Expected CTC"
+              tooltip="Your expected annual compensation"
+    
+              showToolTip={false}
+            />
             <Controller
               control={control}
               name="expectedCTC"
-              rules={{ required: 'Expected CTC is required' }}
+            
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={styles.input}
@@ -797,10 +910,17 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                 />
               )}
             />
+
+            <InputLabel 
+              label="Reason for Job Change"
+              tooltip="Brief explanation for seeking a new opportunity"
+        
+              showToolTip={false}
+            />
             <Controller
               control={control}
               name="reasonForJobChange"
-              rules={{ required: 'Reason for change is required' }}
+          
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={[styles.input, styles.textArea]}
@@ -819,28 +939,26 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
       case 5:
         return (
           <View>
-            <Text style={styles.stepTitle}>Step 5: Project Assignment</Text>
-            <Text style={styles.label}>Please answer the following questions:</Text>
-            <Text style={styles.question}>
-              1. Describe a challenging project you've worked on in the renewable energy sector.
-              {'\n'}
-              2. What specific skills make you suitable for this role?
-              {'\n'}
-              3. How would you manage a solar project from start to finish?
-            </Text>
+            <Text style={styles.stepTitle}>Step 5: Special Achievement</Text>
+             <InputLabel 
+              label="Achievements"
+              tooltip="Highlight any special achievements or projects"
+              // required
+              showToolTip={true}
+            />
             <Controller
               control={control}
-              name="projectDescription"
-              rules={{ required: 'Project description is required' }}
+              name="achievement"
+          
               render={({ field: { onChange, value } }) => (
                 <TextInput
                   style={[styles.input, styles.textArea]}
+                  placeholder="Achievements"
                   placeholderTextColor="#666"
-                  placeholder="Your Response"
-                  value={formValues.projectDescription}
+                  value={formValues.achievement}
                   onChangeText={onChange}
                   multiline
-                  numberOfLines={8}
+                  numberOfLines={4}
                 />
               )}
             />
@@ -858,20 +976,39 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
                   : 'Upload Resume (PDF, DOC, DOCX — Max: 5MB)'}
               </Text>
             </TouchableOpacity>
+            
             <View style={styles.checkboxContainer}>
               <Controller
                 control={control}
                 name="termsAccepted"
-                rules={{ required: 'You must accept the terms' }}
-                render={({ field: { onChange, value } }) => (
-                  <TouchableOpacity
-                    style={[styles.checkbox, value && styles.checkboxChecked]}
-                    onPress={() => onChange(!value)}
-                  >
-                    <Text style={styles.checkboxText}>
-                      I agree to the Terms and Privacy Policy
-                    </Text>
-                  </TouchableOpacity>
+                rules={{ 
+                  required: 'You must accept the terms and conditions' 
+                }}
+                render={({ field: { onChange, value }, fieldState: { error } }) => (
+                  <View>
+                    <TouchableOpacity
+                      style={[
+                        styles.checkbox, 
+                        value && styles.checkboxChecked,
+                        error && styles.checkboxError
+                      ]}
+                      onPress={() => onChange(!value)}
+                    >
+                      <Ionicons 
+                        name={value ? "checkbox" : "square-outline"} 
+                        size={24} 
+                        color={value ? "#1dbf73" : "#6c757d"} 
+                      />
+                      <Text style={styles.checkboxText}>
+                        I agree to the Terms and Privacy Policy
+                      </Text>
+                    </TouchableOpacity>
+                    {error && (
+                      <Text style={styles.errorText}>
+                        {error.message}
+                      </Text>
+                    )}
+                  </View>
                 )}
               />
             </View>
@@ -1087,6 +1224,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#e8f5e9',
     borderColor: '#1dbf73',
   },
+  checkboxError: {
+    borderColor: '#dc3545',
+    borderWidth: 1,
+  },
   checkboxText: {
     marginLeft: 8,
     fontSize: 14,
@@ -1203,9 +1344,8 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#dc3545',
     fontSize: 12,
-    marginHorizontal: 20,
-    marginTop: -12,
-    marginBottom: 16,
+    marginTop: 4,
+    marginLeft: 8,
   },
   helperText: {
     fontSize: 12,

@@ -19,6 +19,7 @@
     "@react-navigation/native-stack": "^7.3.10",
     "@reduxjs/toolkit": "^2.7.0",
     "axios": "^1.9.0",
+    "crypto": "^1.0.1",
     "date-fns": "^4.1.0",
     "depcheck": "^1.4.7",
     "expo": "~53.0.8",

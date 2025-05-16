@@ -19,6 +19,7 @@ import NotificationsScreen from '../screens/notifications/NotificationsScreen';
 import { useAppDispatch } from '../redux/store';
 import { logout } from '../redux/authSlice';
 import NotificationService from '../services/NotificationService';
+import ApplicationDetails from '../screens/jobs/ApplicationDetails';
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
 const Tab = createBottomTabNavigator<DrawerParamList>();
@@ -100,26 +101,42 @@ const HeaderRight = ({ navigation }: { navigation: any }) => {
   const [notifications, setNotifications] = useState<StoredNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  useEffect(() => {
-    // Load notifications when component mounts
-    const loadNotifications = async () => {
-      const storedNotifications = await NotificationService.getNotifications();
-      setNotifications(storedNotifications);
-      setUnreadCount(storedNotifications.filter(n => !n.read).length);
-    };
+  const loadNotifications = async () => {
+    const storedNotifications = await NotificationService.getNotifications();
+    setNotifications(storedNotifications);
+    setUnreadCount(storedNotifications.filter(n => !n.read).length);
+  };
 
+  useEffect(() => {
     loadNotifications();
 
     // Listen for new notifications
-    const unsubscribe = NotificationService.onMessageReceived((notification) => {
+    const messageSubscription = NotificationService.onMessageReceived((notification) => {
       console.log('New notification received:', notification);
-      loadNotifications(); // Reload notifications when new one arrives
+      loadNotifications();
     });
 
-    return () => unsubscribe();
-  }, []);
+    // Listen for notification read status changes
+    const readSubscription = NotificationService.onNotificationsRead(() => {
+      loadNotifications();
+    });
 
-  const handleNotificationPress = () => {
+    // Focus listener to update badge when screen comes into focus
+    const unsubscribeFocus = navigation.addListener('focus', () => {
+      loadNotifications();
+    });
+
+    return () => {
+      messageSubscription();
+      readSubscription();
+      unsubscribeFocus();
+    };
+  }, [navigation]);
+
+  const handleNotificationPress = async () => {
+    // Mark all notifications as read when opening notifications screen
+    await NotificationService.markAllAsRead();
+    setUnreadCount(0);
     navigation.navigate('Notifications');
   };
 
@@ -256,6 +273,19 @@ const MainStack = () => {
         options={{
           headerShown: true,  // Keep header for job application
           title: 'Notifications',
+          headerStyle: {
+            backgroundColor: '#1dbf73',
+          },
+          headerTintColor: '#fff',
+        }}
+      />
+       <Stack.Screen
+        name="ApplicationDetails"
+        component={ApplicationDetails}
+
+        options={{
+          headerShown: true,  // Keep header for job application
+          title: 'Application Details',
           headerStyle: {
             backgroundColor: '#1dbf73',
           },

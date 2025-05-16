@@ -57,13 +57,17 @@ export default function JobDetailsScreen({ navigation, route }: Props) {
       <ScrollView style={styles.scrollView}>
         {/* Header Section */}
         <View style={styles.header}>
-          <Image 
-            source={{ uri: job.company.logo }} 
-            style={styles.companyLogo}
-            defaultSource={require('../../../assets/default-logo.png')}
-          />
+          {job.company.logo ? (
+            <Image 
+              source={{ uri: job.company.logo }} 
+              style={styles.companyLogo}
+              defaultSource={require('../../../assets/default-logo.png')}
+            />
+          ) : (
+            <Ionicons name="business" size={45} color="#666" />
+          )}
           <Text style={styles.title}>{job.title}</Text>
-          <Text style={styles.company}>{job.company.userId.name}</Text>
+          <Text style={styles.company}>{job.company.name}</Text>
         </View>
 
         {/* Quick Info Section */}
@@ -80,14 +84,47 @@ export default function JobDetailsScreen({ navigation, route }: Props) {
             value={job.jobType}
           />
           <DetailRow
+            icon="laptop-outline"
+            label="Work Mode"
+            value={job.jobMode}
+          />
+          <DetailRow
             icon="cash-outline"
             label="Salary Range"
             value={`₹${job.salaryRange.min.toLocaleString()} - ₹${job.salaryRange.max.toLocaleString()} /year`}
           />
           <DetailRow
+            icon="briefcase-outline"
+            label="Department"
+            value={job.department}
+          />
+          <DetailRow
+            icon="trending-up-outline"
+            label="Experience Level"
+            value={job.experienceLevel}
+          />
+          <DetailRow
             icon="time-outline"
             label="Experience Required"
             value={`${job.experienceRange.min}-${job.experienceRange.max} years`}
+          />
+          <DetailRow
+            icon="calendar-outline"
+            label="Application Deadline"
+            value={new Date(job.applicationDeadline).toLocaleDateString('en-US', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric'
+            })}
+          />
+          <DetailRow
+            icon="time-outline"
+            label="Posted On"
+            value={new Date(job.createdAt).toLocaleDateString('en-US', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric'
+            })}
           />
         </View>
 
@@ -130,17 +167,69 @@ export default function JobDetailsScreen({ navigation, route }: Props) {
             {job.company.about}
           </Text>
         </View>
+
+        {/* Company Details Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Company Details</Text>
+          <View style={styles.companyDetails}>
+            <DetailRow
+              icon="business-outline"
+              label="Company Size"
+              value={job.companyProfile?.companySize || 'Not specified'}
+            />
+            <DetailRow
+              icon="globe-outline"
+              label="Industry"
+              value={job.companyProfile?.industry || 'Not specified'}
+            />
+            <DetailRow
+              icon="location-outline"
+              label="Company Location"
+              value={job.companyProfile?.location || 'Not specified'}
+            />
+            {job.companyProfile?.website && (
+              <DetailRow
+                icon="link-outline"
+                label="Website"
+                value={job.companyProfile.website}
+              />
+            )}
+            {job.companyProfile?.about && (
+              <View style={styles.aboutCompany}>
+                <Text style={styles.aboutLabel}>About Company</Text>
+                <Text style={styles.aboutText}>{job.companyProfile.about}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Application Status Section */}
+        {job.alreadyApplied && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Application Status</Text>
+            <View style={styles.statusContainer}>
+              <View style={[styles.statusBadge, styles.pending]}>
+                <Ionicons name="time" size={24} color="#fff" />
+                <Text style={styles.statusText}>Application Under Review</Text>
+              </View>
+              <Text style={styles.appliedDate}>
+                Applied on: {new Date(job.updatedAt).toLocaleDateString('en-US', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric'
+                })}
+              </Text>
+            </View>
+          </View>
+        )}
       </ScrollView>
 
-      {/* Apply Button */}
+      {/* Footer Section */}
       <View style={styles.footer}>
-        {isApplied ? (
-          <View style={[styles.appliedButton, styles[appliedJob?.status || 'pending']]}>
-            <Text style={styles.appliedButtonText}>
-              {appliedJob?.status === 'shortlisted' ? 'Shortlisted' :
-               appliedJob?.status === 'rejected' ? 'Application Rejected' :
-               'Application Submitted'}
-            </Text>
+        {job.alreadyApplied ? (
+          <View style={[styles.appliedButton, styles.pending,{    backgroundColor: '#a5a5a5',
+    }]}>
+            <Text style={styles.appliedButtonText}> Already Applied</Text>
           </View>
         ) : (
           <TouchableOpacity
@@ -290,6 +379,8 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 8,
     alignItems: 'center',
+    backgroundColor: '#495057',
+    
   },
   appliedButtonText: {
     color: '#fff',
@@ -298,6 +389,7 @@ const styles = StyleSheet.create({
   },
   pending: {
     backgroundColor: '#FF9500',
+
   },
   shortlisted: {
     backgroundColor: '#34C759',
@@ -310,5 +402,50 @@ const styles = StyleSheet.create({
     color: '#dc3545',
     textAlign: 'center',
     marginTop: 20,
+  },
+  statusContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 24,
+  },
+  statusText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  statusDate: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 8,
+  },
+  appliedDate: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  aboutCompany: {
+    marginTop: 16,
+  },
+  aboutLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 8,
+  },
+  aboutText: {
+    fontSize: 15,
+    color: '#666',
+    lineHeight: 22,
+  },
+  companyDetails: {
+    marginTop: 8,
   },
 });

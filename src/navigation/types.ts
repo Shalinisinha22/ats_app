@@ -19,6 +19,7 @@ export type DrawerParamList = {
     JobDetails: { jobId: string };
     JobApplication: { job: Job };
     Notifications: undefined;
+    ApplicationDetails: { applicationId: string };
 };
 
 // For backwards compatibility

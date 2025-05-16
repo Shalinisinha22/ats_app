@@ -42,13 +42,13 @@ export const loginUser = createAsyncThunk(
   async (userData: { email: string; password: string }, { dispatch }) => {
     try {
       const response = await api.post('/user/login', userData);
-      const user = response.data?.data?.user;
+      const user = response.data?.data;
 
       if (!user) {
         throw new Error('Invalid credentials');
       }
 
-
+        console.log()
 
       const updateUser = { ...user, password: userData?.password };
       await AsyncStorage.setItem('user', JSON.stringify(updateUser));
@@ -66,6 +66,8 @@ export const loginUser = createAsyncThunk(
 export const updateProfile = createAsyncThunk(
   'auth/updateProfile',
   async (profileData: Partial<User>, { getState, dispatch, rejectWithValue }) => {
+
+    console.log('updateProfile called with data:', profileData);
     try {
       const state: any = getState();
       const currentUser = state.auth.user;

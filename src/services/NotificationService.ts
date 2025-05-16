@@ -47,6 +47,7 @@ class NotificationService {
   private responseSubscription: Notifications.Subscription | null = null;
   private static readonly STORAGE_KEY = '@notifications';
   private notifications: StoredNotification[] = [];
+  private readListeners: Set<() => void> = new Set();
 
   constructor() {
     this.loadStoredNotifications();
@@ -91,6 +92,31 @@ class NotificationService {
       notification.id === id ? { ...notification, read: true } : notification
     );
     await this.saveNotifications();
+    this.notifyReadListeners();
+  }
+
+  async markAllAsRead() {
+    this.notifications = this.notifications.map(notification => ({
+      ...notification,
+      read: true
+    }));
+    await this.saveNotifications();
+    this.notifyReadListeners();
+  }
+
+  onNotificationsRead(callback: () => void) {
+    this.readListeners.add(callback);
+    return () => {
+      this.readListeners.delete(callback);
+    };
+  }
+
+  private notifyReadListeners() {
+    this.readListeners.forEach(listener => listener());
+  }
+
+  getUnreadCount(): number {
+    return this.notifications.filter(n => !n.read).length;
   }
 
   async clearNotifications() {

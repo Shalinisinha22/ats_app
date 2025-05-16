@@ -67,6 +67,7 @@ export default function SavedJobsScreen() {
             job={job}
             showSaveButton={true}
             showApplyButton={true}
+            showBadge={false}
           />
         ))}
       </ScrollView>

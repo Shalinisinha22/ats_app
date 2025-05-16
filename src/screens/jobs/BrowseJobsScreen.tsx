@@ -20,6 +20,12 @@ import { RootState } from '../../redux/store';
 import { mockJobs } from '../../utils/mockData'; // Add this import
 import JobCard from '../../components/JobCard';
 import { JobCardSkeleton } from '../../components/JobCardSkeleton'; // Add import
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { DrawerParamList } from '../../navigation/types';
+
+// Add type for navigation
+type BrowseScreenNavigationProp = NativeStackNavigationProp<DrawerParamList>;
 
 // Update the filterJobs function with null checks
 const filterJobs = (jobs: Job[], filters: JobFilters) => {
@@ -44,6 +50,8 @@ const filterJobs = (jobs: Job[], filters: JobFilters) => {
 };
 
 export default function BrowseJobsScreen() {
+  // Add navigation hook near other hooks
+  const navigation = useNavigation<BrowseScreenNavigationProp>();
   const dispatch = useAppDispatch();
   const { allJobs, savedJobs, appliedJobs, isLoading, error } = useAppSelector(state => state.jobs);
   const filters = useAppSelector(state => state.jobs.filters) || {
@@ -97,7 +105,7 @@ export default function BrowseJobsScreen() {
 
   // Calculate KPI metrics
   const totalApplied = appliedJobs.length;
-  const totalSaved = savedJobs.length;
+  const totalSaved = allJobs.length? savedJobs.length:0;
   const totalInterviews = appliedJobs.filter(job => job.status === 'shortlisted').length;
 
   // Update the isValidJob function with more thorough validation
@@ -114,6 +122,7 @@ export default function BrowseJobsScreen() {
   // Filter out invalid jobs before rendering
   const validJobs = allJobs.filter(isValidJob);
 
+  // Update the renderJobs function
   const renderJobs = () => {
     if (isLoading && allJobs.length === 0) {
       return (
@@ -152,6 +161,7 @@ export default function BrowseJobsScreen() {
           job={job}
           showSaveButton={true}
           showApplyButton={true}
+          onPress={() => navigation.navigate('JobDetails', { jobId: job._id })}
         />
       );
     }).filter(Boolean);
@@ -183,6 +193,11 @@ export default function BrowseJobsScreen() {
   const handleFilter = (filterType: 'location' | 'category', value: string) => {
     dispatch(setFilters({ [filterType]: value }));
   };
+
+  const handleRefresh = () => {
+    dispatch(fetchAllJobs());
+  };
+
   const KPICard = ({ title, value, icon, color }: { title: string; value: number; icon: string; color: string }) => (
     <View style={[styles.kpiCard, { borderColor: color }]}>
       <View style={[styles.kpiIconContainer, { backgroundColor: color + '15' }]}>
@@ -195,27 +210,35 @@ export default function BrowseJobsScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.searchContainer}>
-      <TextInput
-          style={styles.searchInput}
-          placeholder="Search jobs..."
-         placeholderTextColor="#666"
-          value={filters.search}
-          onChangeText={handleSearch}
-        />
-        <TouchableOpacity
-          style={styles.filterButton}
-          onPress={() => setShowFilters(true)}
+      <View style={styles.header}>
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search jobs..."
+            placeholderTextColor="#666"
+            value={filters.search}
+            onChangeText={handleSearch}
+          />
+          <TouchableOpacity
+            style={styles.filterButton}
+            onPress={() => setShowFilters(true)}
+          >
+            <View style={styles.filterButtonContent}>
+              <Ionicons name="options-outline" size={20} color="#fff" />
+              <Text style={styles.filterButtonText}>Filters</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity 
+          onPress={handleRefresh}
+          style={styles.refreshButton}
         >
-          <View style={styles.filterButtonContent}>
-            <Ionicons name="options-outline" size={20} color="#fff" />
-            <Text style={styles.filterButtonText}>Filters</Text>
-          </View>
+          <Ionicons name="refresh" size={24} color="#0066cc" />
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content}>
-      <View style={styles.kpiContainer}>
+        <View style={styles.kpiContainer}>
           <KPICard
             title="Applied Jobs"
             value={totalApplied}
@@ -236,28 +259,9 @@ export default function BrowseJobsScreen() {
           />
         </View>
 
-
         <View style={styles.recommendedTitleContainer}>
           <Text style={styles.recommendedTitle}>Recommended Jobs</Text>
         </View>
-
-
-   
-
-        {/* Category-wise Jobs */}
-        {/* {Object.entries(jobsByCategory).map(([category, jobs]) => (
-          <View key={category} style={styles.categorySection}>
-            <View style={styles.categoryHeader}>
-              <Text style={styles.categoryTitle}>{category}</Text>
-              <Text style={styles.jobCount}>{jobs.length} jobs</Text>
-            </View>
-            {jobs.map(job => (
-              <JobCard key={job.id} job={job} />
-            ))}
-          </View>
-        ))} */}
-
-
 
         <View style={styles.jobsList}>
           {renderJobs()}
@@ -347,14 +351,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
   searchContainer: {
-    padding: 16,
     flexDirection: 'row',
     gap: 12,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
     alignItems: 'center',
+    flex: 1,
   },
   content: {
     flex: 1,
@@ -452,6 +466,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '500',
+  },
+  refreshButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 102, 204, 0.1)',
+    marginLeft:5
   },
   modalContainer: {
     flex: 1,

@@ -66,6 +66,7 @@ export interface UserProfile {
     relevantExperience:string;
     currentCompany: string;
     currentJobTitle:string;
+    achievement: string;
 }
 
 

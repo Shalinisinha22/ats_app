@@ -24,6 +24,7 @@ import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { uploadToCloudinary, getViewableUrl } from '../../utils/cloudinary';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { format } from 'date-fns';
 
 type Section = 'basic' | 'contact' | 'education' | 'preferences' | 'skills' | 'resume';
 
@@ -52,6 +53,8 @@ const EDUCATION_OPTIONS = [
   'Other',
 ];
 
+const generateId = () => Math.random().toString(36).substr(2, 9);
+
 const ProfileScreen = () => {
   const dispatch = useAppDispatch();
 
@@ -78,9 +81,24 @@ const ProfileScreen = () => {
     resume: new Animated.Value(0),
   });
   const [profileImage, setProfileImage] = useState(userProfile?.image?.url || null);
-  const [educationEntries, setEducationEntries] = useState<EducationEntry[]>(
-    userProfile?.education || []
-  );
+  const [educationEntries, setEducationEntries] = useState<EducationEntry[]>(() => {
+    if (userProfile?.education && userProfile.education.length > 0) {
+      return userProfile.education.map(edu => ({
+        id: generateId(),
+        degree: edu.degree || '',
+        institution: edu.institution || '',
+        startDate: edu.startDate ? format(new Date(edu.startDate), 'MMM yyyy') : '',
+        endDate: edu.endDate ? format(new Date(edu.endDate), 'MMM yyyy') : '',
+      }));
+    }
+    return [{
+      id: generateId(),
+      degree: '',
+      institution: '',
+      startDate: '',
+      endDate: '',
+    }];
+  });
   const [experienceEntries, setExperienceEntries] = useState<ExperienceEntry[]>(
     userProfile?.experience || []
   );
@@ -197,7 +215,7 @@ const ProfileScreen = () => {
         updatedData.preferredWorkLocation = formData.preferredWorkLocation;
       } else if (section === 'education') {
         updatedData.education = educationEntries;
-        updatedData.experienceEntries = experienceEntries;
+        updatedData.experience = experienceEntries;
       } else if (section === 'preferences') {
         updatedData.noticePeriod = formData.noticePeriod;
         updatedData.currentCTC = formData.currentCTC;
@@ -438,7 +456,7 @@ const ProfileScreen = () => {
 
   const addEducationEntry = () => {
     const newEntry: EducationEntry = {
-      id: Date.now().toString(),
+      id: generateId(),
       degree: '',
       institution: '',
       startDate: '',
@@ -461,7 +479,7 @@ const ProfileScreen = () => {
 
   const addExperienceEntry = () => {
     const newEntry: ExperienceEntry = {
-      id: Date.now().toString(),
+      id: generateId(),
       company: '',
       title: '',
       startDate: '',
@@ -494,10 +512,8 @@ const ProfileScreen = () => {
     setShowDatePicker(false);
     
     if (selected && dateType) {
-      const formattedDate = selected.toLocaleDateString('en-US', {
-        month: 'short',
-        year: 'numeric'
-      });
+      // Format date as "MMM yyyy" (e.g., "Jan 2024")
+      const formattedDate = format(selected, 'MMM yyyy');
       
       if (dateType.type === 'education') {
         updateEducationEntry(dateType.id, dateType.field, formattedDate);
@@ -1316,7 +1332,7 @@ const styles = StyleSheet.create({
     height: 48,
   },
   dateText: {
-    fontSize: 16,
+    fontSize: 12,
     color: '#2d3436',
   },
   placeholderText: {

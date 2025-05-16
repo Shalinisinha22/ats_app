@@ -5,25 +5,98 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  RefreshControl
+  RefreshControl,
+  Alert,
+  Modal,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import NotificationService from '../../services/NotificationService';
 import { StoredNotification } from '../../types/notification';
 import { format } from 'date-fns';
 
-const NotificationsScreen = () => {
+const NotificationsScreen = ({ navigation }) => {
   const [notifications, setNotifications] = useState<StoredNotification[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
+
+  useEffect(() => {
+    checkAndRequestPermissions();
+  }, []);
+
+  useEffect(() => {
+    // Mark all as read when screen is focused
+    const unsubscribeFocus = navigation.addListener('focus', () => {
+      NotificationService.markAllAsRead();
+    });
+
+    loadNotifications();
+
+    return () => {
+      unsubscribeFocus();
+    };
+  }, [navigation]);
+
+  const checkAndRequestPermissions = async () => {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    
+    if (existingStatus !== 'granted') {
+      setShowPermissionModal(true);
+    } else {
+      await setupNotifications();
+    }
+  };
+
+  const handleAllowNotifications = async () => {
+    const { status } = await Notifications.requestPermissionsAsync();
+    setShowPermissionModal(false);
+
+    if (status === 'granted') {
+      await setupNotifications();
+    } else {
+      Alert.alert(
+        'Permission Required',
+        'Please enable notifications in your device settings to receive updates.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  const setupNotifications = async () => {
+    try {
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'Default',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#1dbf73',
+        });
+      }
+
+      const token = await Notifications.getExpoPushTokenAsync({
+        projectId: Constants.expoConfig?.extra?.eas?.projectId ?? null,
+      });
+      console.log('Push token:', token);
+
+      // Store token in your backend here if needed
+      
+      const subscription = Notifications.addNotificationReceivedListener(notification => {
+        console.log('Received notification:', notification);
+        loadNotifications();
+      });
+
+      return () => subscription.remove();
+    } catch (error) {
+      console.error('Error setting up notifications:', error);
+    }
+  };
 
   const loadNotifications = async () => {
     const storedNotifications = await NotificationService.getNotifications();
     setNotifications(storedNotifications);
   };
-
-  useEffect(() => {
-    loadNotifications();
-  }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -59,6 +132,38 @@ const NotificationsScreen = () => {
     </TouchableOpacity>
   );
 
+  const renderPermissionModal = () => (
+    <Modal
+      visible={showPermissionModal}
+      transparent
+      animationType="fade"
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <Ionicons name="notifications-outline" size={50} color="#1dbf73" />
+          <Text style={styles.modalTitle}>Enable Notifications</Text>
+          <Text style={styles.modalText}>
+            Stay updated with job matches, application status, and important updates.
+          </Text>
+          <View style={styles.modalButtons}>
+            <TouchableOpacity 
+              style={[styles.modalButton, styles.laterButton]}
+              onPress={() => setShowPermissionModal(false)}
+            >
+              <Text style={styles.laterButtonText}>Later</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.modalButton, styles.allowButton]}
+              onPress={handleAllowNotifications}
+            >
+              <Text style={styles.allowButtonText}>Allow</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
     <View style={styles.container}>
       <FlatList
@@ -74,6 +179,7 @@ const NotificationsScreen = () => {
           </View>
         )}
       />
+      {renderPermissionModal()}
     </View>
   );
 };
@@ -136,7 +242,58 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: '#6c757d'
-  }
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 24,
+    width: '80%',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  modalText: {
+    textAlign: 'center',
+    color: '#666',
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+  },
+  modalButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    marginHorizontal: 8,
+  },
+  allowButton: {
+    backgroundColor: '#1dbf73',
+  },
+  laterButton: {
+    backgroundColor: '#f0f0f0',
+  },
+  allowButtonText: {
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  laterButtonText: {
+    color: '#666',
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
 });
 
 export default NotificationsScreen;

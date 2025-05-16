@@ -9,17 +9,28 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { DrawerParamList } from '../navigation/types';
 import Toast from 'react-native-toast-message';
+import { LinearGradient } from 'expo-linear-gradient';
 
-type Props = {
+type JobScreenNavigationProp = NativeStackNavigationProp<DrawerParamList>;
+
+interface JobCardProps {
   job: Job;
   showSaveButton?: boolean;
   showApplyButton?: boolean;
   showStatus?: boolean;
+  showBadge?: boolean;
   onPress?: () => void;
-  
-};
+}
 
-export default function JobCard({ job, ...props }: Props) {
+const JobCard: React.FC<JobCardProps> = ({ 
+  job, 
+  showStatus = false, 
+  showSaveButton = true, 
+  showApplyButton = true, 
+  showBadge = true,
+  onPress,
+  ...props 
+}) => {
   if (!job) {
     return (
       <View style={styles.card}>
@@ -29,8 +40,8 @@ export default function JobCard({ job, ...props }: Props) {
   }
 
   const dispatch = useAppDispatch();
-  const navigation = useNavigation<NativeStackNavigationProp<DrawerParamList>>();
-  
+  const navigation = useNavigation<JobScreenNavigationProp>();
+
   const savedJobs = useAppSelector((state: RootState) => state.jobs.savedJobs);
   const appliedJobs = useAppSelector((state: RootState) => state.jobs.appliedJobs ?? []);
 
@@ -42,7 +53,7 @@ export default function JobCard({ job, ...props }: Props) {
     dispatch(fetchSavedJobs());
   }, [dispatch]);
 
-  const handleSave = async () => {
+  const handleSaveToggle = async () => {
     try {
       if (isSaved) {
         await dispatch(unsaveJobFromApi(job._id)).unwrap();
@@ -81,35 +92,39 @@ export default function JobCard({ job, ...props }: Props) {
 
   return (
     <View style={styles.card}>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.cardContent}
-        onPress={props.onPress || (() => navigation.navigate('JobDetails', { jobId: job._id }))}
+        onPress={onPress || (() => navigation.navigate('JobDetails', { jobId: job._id }))}
         activeOpacity={0.7}
       >
         <View style={styles.header}>
+          
           <View style={styles.companyInfo}>
-            <View style={styles.logoContainer}>
-              <Image 
-                source={{ uri: job.company.logo }} 
-                style={styles.companyLogo} 
-              />
-            </View>
+            { job.company.logo ? 
+                <View style={styles.logoContainer}>
+                  <Image
+                    source={{ uri: job.company.logo }}
+                    style={styles.companyLogo}
+                  />
+                </View>
+            : 
+              <View style={styles.logoContainer}>
+                <Ionicons name="business" size={45} color="#666" />
+              </View>
+            }
             <View style={styles.titleContainer}>
               <Text style={styles.title}>{job.title}</Text>
               <Text style={styles.company}>
-                <Ionicons name="business" size={14} color="#666" /> {job.company?.userId?.name || 'Company Name'}
+                <Ionicons name="business" size={14} color="#666" /> {job.company?.name || 'Company Name'}
               </Text>
             </View>
+
+
+       
+         
           </View>
-          {props.showSaveButton && (
-            <TouchableOpacity onPress={handleSave} style={styles.saveIconButton}>
-              <Ionicons 
-                name={isSaved ? "bookmark" : "bookmark-outline"}
-                size={24} 
-                color={isSaved ? "#5e5e5e" : "#666"} 
-              />
-            </TouchableOpacity>
-          )}
+
+           
         </View>
 
         <View style={styles.detailsContainer}>
@@ -128,7 +143,7 @@ export default function JobCard({ job, ...props }: Props) {
             <View style={styles.detailItem}>
               <MaterialCommunityIcons name="currency-inr" size={16} color="#1dbf73" />
               <Text style={styles.salary}>
-                {job.salaryRange ? 
+                {job.salaryRange ?
                   `${job.salaryRange.min.toLocaleString()} - ${job.salaryRange.max.toLocaleString()} /year` :
                   'Salary not disclosed'
                 }
@@ -137,7 +152,7 @@ export default function JobCard({ job, ...props }: Props) {
             <View style={styles.detailItem}>
               <MaterialCommunityIcons name="badge-account" size={16} color="#666" />
               <Text style={styles.experience}>
-                {job.experienceRange ? 
+                {job.experienceRange ?
                   `${job.experienceRange.min}-${job.experienceRange.max} years` :
                   'Not specified'
                 }
@@ -146,40 +161,41 @@ export default function JobCard({ job, ...props }: Props) {
           </View>
         </View>
 
-        {props.showStatus && appliedJob?.status && (
-          <View style={[styles.statusContainer, styles[appliedJob.status]]}>
-            <MaterialCommunityIcons 
-              name={appliedJob.status === 'shortlisted' ? 'check-circle' : 
-                   appliedJob.status === 'rejected' ? 'close-circle' : 'clock-outline'} 
-              size={18} 
-              color="#fff" 
-            />
-            <Text style={styles.statusText}>
-              {appliedJob.status.charAt(0).toUpperCase() + appliedJob.status.slice(1)}
-            </Text>
-          </View>
-        )}
+  
+      </TouchableOpacity>
 
-        {(props.showApplyButton && !isApplied) && (
+      <View style={styles.footer}>
+           {!job.alreadyApplied && showSaveButton && (
           <TouchableOpacity 
-            style={styles.applyButton}
+            style={styles.saveButton} 
+            onPress={handleSaveToggle}
+          >
+            <Ionicons 
+              name={isSaved ? "bookmark" : "bookmark-outline"} 
+              size={25} 
+          color="#1dbf73"
+            />
+          </TouchableOpacity>
+        )}
+        
+        {showApplyButton && !job.alreadyApplied && (
+          <TouchableOpacity 
+            style={styles.applyButton} 
             onPress={handleApply}
           >
-            <Ionicons name="paper-plane" size={18} color="#fff" />
             <Text style={styles.applyButtonText}>Apply Now</Text>
           </TouchableOpacity>
         )}
 
-        {isApplied && !props.showStatus && (     
-          <View style={styles.appliedBadge}>
-            <Ionicons name="checkmark-circle" size={18} color="#fff" />
-            <Text style={styles.appliedText}>Applied</Text>
+        {job.alreadyApplied && (
+          <View style={[styles.appliedButton]}>
+            <Text style={styles.appliedButtonText}>Already Applied</Text>
           </View>
         )}
-      </TouchableOpacity>
+      </View>
     </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
   card: {
@@ -212,6 +228,7 @@ const styles = StyleSheet.create({
   },
   saveIconButton: {
     padding: 4,
+
   },
   icon: {
     padding: 4,
@@ -274,23 +291,17 @@ const styles = StyleSheet.create({
   },
   applyButton: {
     backgroundColor: '#1dbf73',
-    padding: 14,
-    borderRadius: 12,
-    marginTop: 16,
-    flexDirection: 'row',
-    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+
+        padding: 8,
+    borderRadius: 6,
     alignItems: 'center',
-    gap: 8,
-    shadowColor: '#1dbf73',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
   },
   applyButtonText: {
     color: '#fff',
-    fontSize: 16,
     fontWeight: '600',
+    fontSize: 14,
   },
   appliedBadge: {
     backgroundColor: '#34C759',
@@ -306,31 +317,43 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  statusContainer: {
-    padding: 8,
-    borderRadius: 6,
-    marginTop: 12,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+  statusBadge: {
     flexDirection: 'row',
-    gap: 6,
-  },
-  pending: {
-    backgroundColor: '#FF9500',
-  },
-  shortlisted: {
-    backgroundColor: '#34C759',
-  },
-  rejected: {
-    backgroundColor: '#FF3B30',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginLeft: 'auto',
   },
   statusText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+    marginLeft: 4,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  saveButton: {
+    padding: 8,
+  },
+  appliedButton: {
+    backgroundColor: '#a5a5a5',
+    padding: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  appliedButtonText: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
   },
 });
+
+export default JobCard;
