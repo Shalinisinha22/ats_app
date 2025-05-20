@@ -189,7 +189,7 @@ const JobCard: React.FC<JobCardProps> = ({
 
         {job.alreadyApplied && (
           <View style={[styles.appliedButton]}>
-            <Text style={styles.appliedButtonText}>Already Applied</Text>
+            <Text style={styles.appliedButtonText}>Applied</Text>
           </View>
         )}
       </View>

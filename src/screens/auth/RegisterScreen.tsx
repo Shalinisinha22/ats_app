@@ -77,9 +77,9 @@ export default function RegisterScreen({ navigation }: Props) {
 
         // console.log("Registration success:", result);
 
-        if (result?.user?.id) {
+        if (result?.user?.data?.id) {
           navigation.replace("RegisterSuccess", {
-            loginId: result.user.email,
+            loginId: result?.user?.data?.email,
             password: data.password,
           });
         } else {

@@ -13,12 +13,19 @@
       "backgroundColor": "#1dbf73"
     },
     "ios": {
+      "bundleIdentifier": "com.shalinisinha21.empquick",
+      "buildNumber": "1",
+       "googleServicesFile": "./GoogleService-Info.plist",
       "supportsTablet": true,
       "runtimeVersion": {
         "policy": "appVersion"
       },
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"]
+        "UIBackgroundModes": [
+          "remote-notification",
+          "remote-notification"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {

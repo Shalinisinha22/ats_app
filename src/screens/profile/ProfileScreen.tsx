@@ -251,7 +251,7 @@ const ProfileScreen = () => {
         try {
           // Upload to Cloudinary
           const cloudinaryResponse = await uploadToCloudinary(fileInfo.uri, 'raw');
-          console.log('Resume upload response:', cloudinaryResponse);
+          // console.log('Resume upload response:', cloudinaryResponse);
 
           if (cloudinaryResponse) {
             // Update profile with Cloudinary data
@@ -420,7 +420,7 @@ const ProfileScreen = () => {
           
           // Upload to Cloudinary
           const cloudinaryResponse = await uploadToCloudinary(imageUri, 'image');
-          console.log('Cloudinary response:', cloudinaryResponse);
+          // console.log('Cloudinary response:', cloudinaryResponse);
   
           if (cloudinaryResponse) {
             // Update local state

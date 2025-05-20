@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "97755986430",
+    "project_id": "empquick",
+    "storage_bucket": "empquick.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:97755986430:android:97875ec5799bdab0b168af",
+        "android_client_info": {
+          "package_name": "com.raja7252725272528752.apps"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC5piVUhvCY77aj-2awM3JXFmhzUaDT6wY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -16,7 +16,7 @@ import { Job } from '../../types';
 
 export default function SavedJobsScreen() {
   const dispatch = useAppDispatch();
-  const { savedJobs, allJobs, isLoading, error } = useAppSelector(state => state.jobs);
+  const { savedJobs, allJobs, isLoading, error,exploreJobs } = useAppSelector(state => state.jobs);
 
   useEffect(() => {
     const loadJobs = async () => {
@@ -25,9 +25,10 @@ export default function SavedJobsScreen() {
     };
     loadJobs();
   }, [dispatch]);
+  // console.log(savedJobs, allJobs, "savedJobs")
 
   const savedJobObjects = savedJobs.map(savedJobId => 
-    allJobs.find(job => job._id === savedJobId)
+    exploreJobs.find(job => job._id === savedJobId)
   ).filter((job): job is Job => job !== undefined);
 
   const renderHeader = () => (
@@ -74,13 +75,13 @@ export default function SavedJobsScreen() {
     );
   };
 
-  if (isLoading) {
-    return (
-      <View style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color="#1dbf73" />
-      </View>
-    );
-  }
+  // if (isLoading) {
+  //   return (
+  //     <View style={[styles.container, styles.centerContent]}>
+  //       <ActivityIndicator size="large" color="#1dbf73" />
+  //     </View>
+  //   );
+  // }
 
   if (error) {
     return (

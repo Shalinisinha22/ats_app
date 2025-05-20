@@ -2,6 +2,7 @@ import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
 import { Job } from "../types";
 import api from "../api";
 import { getState } from "redux-thunk";
+import axios from "axios";
 
 interface JobFilters {
   search: string;
@@ -59,6 +60,7 @@ interface JobsState {
   error: string | null;
   filters: JobFilters;
   isRefreshing: boolean;
+  exploreJobs: Job[];
 }
 
 const initialState: JobsState = {
@@ -75,6 +77,7 @@ const initialState: JobsState = {
     minSalary: null,
   },
   isRefreshing: false,
+  exploreJobs: [],
 };
 
 // Update the fetchAppliedJobs thunk
@@ -150,6 +153,7 @@ export const fetchSavedJobs = createAsyncThunk(
     try {
       const state: RootState = getState() as RootState;
       const user = state.auth.user;
+      // console.log("user", user);
 
       if (!user?.token) {
         return rejectWithValue("Please login to view saved jobs");
@@ -283,7 +287,7 @@ export const unsaveJobFromApi = createAsyncThunk(
         : [];
 
       const updatedSavedJobs = currentSavedIds.filter((id) => id !== jobId);
-      console.log("Updated saved jobs:", updatedSavedJobs);
+      // console.log("Updated saved jobs:", updatedSavedJobs);
 
       const response = await api.put(
         "/user-profile",
@@ -387,7 +391,7 @@ export const applyJobToApi = createAsyncThunk(
 export const fetchAllJobs = createAsyncThunk(
   "jobs/fetchAllJobs",
   async (_, { getState, rejectWithValue }) => {
-    console.log("called")
+    // console.log("called")
     try {
       const state: RootState = getState() as RootState;
       const user = state.auth.user;
@@ -459,6 +463,61 @@ export const fetchAllJobs = createAsyncThunk(
         error?.response?.data?.message ||
           error?.message ||
           "Failed to fetch jobs"
+      );
+    }
+  }
+);
+
+// Add new thunk for exploring all jobs
+export const exploreAllJobs = createAsyncThunk(
+  "jobs/exploreAllJobs",
+  async ({ page = 1, limit = 10 }: { page: number; limit: number }, { getState, rejectWithValue }) => {
+    try {
+      const state: RootState = getState() as RootState;
+      const user = state.auth.user;
+
+      if (!user?.token) {
+        return rejectWithValue("Please login to explore jobs");
+      }
+
+      const response = await api.get(`/job?page=${page}&limit=${limit}`, {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Failed to fetch explore jobs");
+      }
+
+      const transformedJobs = response.data.data.jobs.map((job: any) => ({
+        ...job,
+        company: {
+          _id: job.company._id || "",
+          name: job.company.name || "",
+        },
+        applicationDeadline: new Date(job.applicationDeadline).toISOString(),
+        salaryRange: {
+          min: job.salaryRange?.min || 0,
+          max: job.salaryRange?.max || 0,
+        },
+        experienceRange: {
+          min: job.experienceRange?.min || 0,
+          max: job.experienceRange?.max || 0,
+        },
+        skillsRequired: Array.isArray(job.skillsRequired) ? job.skillsRequired : [],
+        responsibilities: Array.isArray(job.responsibilities) ? job.responsibilities : [],
+      }));
+
+      return {
+        jobs: transformedJobs,
+        pagination: response.data.data.pagination,
+      };
+    } catch (error: any) {
+      console.error("Explore jobs error:", error?.response?.data || error);
+      return rejectWithValue(
+        error?.response?.data?.message || error?.message || "Failed to fetch explore jobs"
       );
     }
   }
@@ -601,6 +660,30 @@ const jobsSlice = createSlice({
         } else {
           state.applications = [action.payload.application];
         }
+      })
+
+      // Handle exploreAllJobs states
+      .addCase(exploreAllJobs.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(exploreAllJobs.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.error = null;
+
+        // Append new jobs to the existing list
+        if (action.payload.pagination.page > 1) {
+          state.exploreJobs = [...state.exploreJobs, ...action.payload.jobs];
+        } else {
+          state.exploreJobs = action.payload.jobs;
+        }
+
+        state.pagination = action.payload.pagination;
+      })
+      .addCase(exploreAllJobs.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+        state.exploreJobs = [];
       });
   },
 });

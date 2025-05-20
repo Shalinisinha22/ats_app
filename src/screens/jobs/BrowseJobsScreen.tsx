@@ -53,7 +53,7 @@ export default function BrowseJobsScreen() {
   // Add navigation hook near other hooks
   const navigation = useNavigation<BrowseScreenNavigationProp>();
   const dispatch = useAppDispatch();
-  const { allJobs, savedJobs, appliedJobs, isLoading, error } = useAppSelector(state => state.jobs);
+  const { allJobs, savedJobs, appliedJobs, isLoading, error, applications } = useAppSelector(state => state.jobs);
   const filters = useAppSelector(state => state.jobs.filters) || {
     search: '',
     location: '',
@@ -104,9 +104,9 @@ export default function BrowseJobsScreen() {
   const categories = getUniqueCategories(jobs);
 
   // Calculate KPI metrics
-  const totalApplied = appliedJobs.length;
-  const totalSaved = allJobs.length? savedJobs.length:0;
-  const totalInterviews = appliedJobs.filter(job => job.status === 'shortlisted').length;
+  const totalApplied = applications.length;
+  const shortlisted =applications.filter(job => job.status === 'Shortlisted').length;
+  const pending = applications.filter(job => job.status === 'Pending').length
 
   // Update the isValidJob function with more thorough validation
   const isValidJob = (job: any): job is Job => {
@@ -208,6 +208,8 @@ export default function BrowseJobsScreen() {
     </View>
   );
 
+  const recommendedJobsCount = filteredJobs.length;
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -233,7 +235,7 @@ export default function BrowseJobsScreen() {
           onPress={handleRefresh}
           style={styles.refreshButton}
         >
-          <Ionicons name="refresh" size={24} color="#0066cc" />
+          <Ionicons name="refresh" size={24} color="#1dbf73" />
         </TouchableOpacity>
       </View>
 
@@ -246,21 +248,34 @@ export default function BrowseJobsScreen() {
             color="#1dbf73"
           />
           <KPICard
-            title="Recommended Jobs"
-            value={totalInterviews}
-            icon="calendar-outline"
+            title="Shortlisted"
+            value={shortlisted}
+            icon="checkmark-circle-outline"
+          
             color="#ff9500"
           />
           <KPICard
-            title="Saved Jobs"
-            value={totalSaved}
-            icon="bookmark-outline"
+            title="Pending Jobs"
+            value={pending}
+            icon="time-outline"
             color="#007aff"
           />
         </View>
 
-        <View style={styles.recommendedTitleContainer}>
-          <Text style={styles.recommendedTitle}>Recommended Jobs</Text>
+        <View style={styles.recommendedSection}>
+          <View style={styles.recommendedHeader}>
+            <View>
+              <Text style={styles.sectionTitle}>Recommended Jobs</Text>
+              <Text style={styles.jobCount}>{recommendedJobsCount} jobs found</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.exploreButton}
+              onPress={() => navigation.navigate('ExploreJobs')}
+            >
+              <Text style={styles.exploreButtonText}>Explore All Jobs</Text>
+              <Ionicons name="arrow-forward" size={16} color="#1dbf73" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.jobsList}>
@@ -587,5 +602,40 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
     fontSize: 16,
+  },
+  recommendedSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
+    marginBottom: 8,
+  },
+  recommendedHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  jobCount: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
+  exploreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#e8f7f0',
+  },
+  exploreButtonText: {
+    color: '#1dbf73',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

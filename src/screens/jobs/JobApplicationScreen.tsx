@@ -86,7 +86,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
   const [resumeFile, setResumeFile] = useState<DocumentPicker.DocumentResult | null>(userProfile?.resume || null);
 
 
-  console.log(userProfile)
+  // console.log(userProfile)
 
   const dispatch = useAppDispatch();
   const {
@@ -365,7 +365,7 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
 
   
 
-      console.log('Submitting application...', data); 
+      // console.log('Submitting application...', data); 
 
       const applicationData = {
         jobId: job._id,
@@ -388,10 +388,10 @@ export default function JobApplicationScreen({ navigation, route }: Props) {
         }
       };
 
-      console.log('Application data:', applicationData); 
+      // console.log('Application data:', applicationData); 
 
       const result = await dispatch(applyJobToApi({ job, applicationData })).unwrap();
-      console.log('API Response:', result); // Add this for debugging
+      // console.log('API Response:', result); // Add this for debugging
 
       await dispatch(fetchAppliedJobs()).unwrap();
 

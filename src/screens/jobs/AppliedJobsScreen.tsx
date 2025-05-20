@@ -18,7 +18,7 @@ export default function AppliedJobsScreen() {
   const { applications, isLoading } = useAppSelector(state => state.jobs);
 
 
-console.log('applications', applications);
+// console.log('applications', applications);
 
   const renderApplications = () => (
     <View style={styles.applicationsContainer}>
@@ -31,20 +31,20 @@ console.log('applications', applications);
     </View>
   );
 
-  if (isLoading) {
-    return (
-      <View style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color="#1dbf73" />
-      </View>
-    );
-  }
+  // if (isLoading) {
+  //   return (
+  //     <View style={[styles.container, styles.centerContent]}>
+  //       <ActivityIndicator size="large" color="#1dbf73" />
+  //     </View>
+  //   );
+  // }
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.content}>
         <View style={styles.kpiContainer}>
           <KPICard
-            title="Active Applications"
+            title="Applied Jobs"
             value={applications.length}
             icon="briefcase-outline"
             gradient={['#1dbf73', '#34d88b']}

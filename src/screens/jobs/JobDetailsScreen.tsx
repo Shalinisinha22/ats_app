@@ -22,8 +22,9 @@ type Props = {
 export default function JobDetailsScreen({ navigation, route }: Props) {
   const { jobId } = route.params;
   const allJobs = useAppSelector(state => state.jobs.allJobs);
+  const exploreJobs = useAppSelector(state => state.jobs.exploreJobs);
   const appliedJobs = useAppSelector(state => state.jobs.appliedJobs);
-  const job = allJobs.find(j => j._id === jobId);
+  const job = exploreJobs.find(j => j._id === jobId);
   
   const appliedJob = appliedJobs.find(j => j._id === jobId);
   const isApplied = Boolean(appliedJob);
@@ -37,7 +38,7 @@ export default function JobDetailsScreen({ navigation, route }: Props) {
   }
 
   const handleApply = () => {
-    navigation.replace('JobApplication', { job });
+    navigation.navigate('JobApplication', { job });
   };
 
   const DetailRow = ({ icon, label, value }: { icon: string; label: string; value: string }) => (

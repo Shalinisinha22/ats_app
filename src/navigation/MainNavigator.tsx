@@ -20,6 +20,7 @@ import { useAppDispatch } from '../redux/store';
 import { logout } from '../redux/authSlice';
 import NotificationService from '../services/NotificationService';
 import ApplicationDetails from '../screens/jobs/ApplicationDetails';
+import ExploreJobsScreen from '../screens/jobs/ExploreJobsScreen';
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
 const Tab = createBottomTabNavigator<DrawerParamList>();
@@ -234,64 +235,8 @@ const TabNavigator = () => {
 
 const MainStack = () => {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false  // Hide the stack navigator header
-      }}
-    >
-      <Stack.Screen 
-        name="MainTabs" 
-        component={TabNavigator}
-      />
-      <Stack.Screen
-        name="JobDetails"
-        component={JobDetailsScreen}
-        options={{
-          headerShown: true,  // Keep header for job details
-          title: 'Job Details',
-          headerStyle: {
-            backgroundColor: '#1dbf73',
-          },
-          headerTintColor: '#fff',
-        }}
-      />
-      <Stack.Screen
-        name="JobApplication"
-        component={JobApplicationScreen}
-        options={{
-          headerShown: true,  // Keep header for job application
-          title: 'Job Application',
-          headerStyle: {
-            backgroundColor: '#1dbf73',
-          },
-          headerTintColor: '#fff',
-        }}
-      />
-        <Stack.Screen
-        name="Notifications"
-        component={NotificationsScreen}
-        options={{
-          headerShown: true,  // Keep header for job application
-          title: 'Notifications',
-          headerStyle: {
-            backgroundColor: '#1dbf73',
-          },
-          headerTintColor: '#fff',
-        }}
-      />
-       <Stack.Screen
-        name="ApplicationDetails"
-        component={ApplicationDetails}
-
-        options={{
-          headerShown: true,  // Keep header for job application
-          title: 'Application Details',
-          headerStyle: {
-            backgroundColor: '#1dbf73',
-          },
-          headerTintColor: '#fff',
-        }}
-      />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="MainTabs" component={TabNavigator} />
     </Stack.Navigator>
   );
 };
@@ -392,13 +337,13 @@ export const MainNavigator = () => {
         }}
       />
       <Drawer.Screen 
-        name="Profile" 
-        component={ProfileScreen}
+        name="ExploreJobs" 
+        component={ExploreJobsScreen}
         options={{
-          title: 'My Profile',
+          title: 'Explore Jobs',
           drawerIcon: ({ color }) => (
             <View style={[styles.drawerIcon, { borderColor: color }]}> 
-              <Ionicons name="person-outline" size={22} color={color} />
+              <Ionicons name="search-outline" size={22} color={color} />
             </View>
           ),
         }}
@@ -425,6 +370,64 @@ export const MainNavigator = () => {
               <Ionicons name="bookmark-outline" size={22} color={color} />
             </View>
           ),
+        }}
+      />
+   
+         <Drawer.Screen 
+        name="Profile" 
+        component={ProfileScreen}
+        options={{
+          title: 'My Profile',
+          drawerIcon: ({ color }) => (
+            <View style={[styles.drawerIcon, { borderColor: color }]}> 
+              <Ionicons name="person-outline" size={22} color={color} />
+            </View>
+          ),
+        }}
+      />
+      {/* Add shared screens at Drawer level */}
+      <Drawer.Screen 
+        name="JobDetails"
+        component={JobDetailsScreen}
+        options={{
+          headerShown: true,
+          title: 'Job Details',
+          headerStyle: { backgroundColor: '#1dbf73' },
+          headerTintColor: '#fff',
+          drawerItemStyle: { height: 0 }  // Hide from drawer
+        }}
+      />
+      <Drawer.Screen 
+        name="JobApplication"
+        component={JobApplicationScreen}
+        options={{
+          headerShown: true,
+          title: 'Job Application',
+          headerStyle: { backgroundColor: '#1dbf73' },
+          headerTintColor: '#fff',
+          drawerItemStyle: { height: 0 }
+        }}
+      />
+      <Drawer.Screen 
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{
+          headerShown: true,
+          title: 'Notifications',
+          headerStyle: { backgroundColor: '#1dbf73' },
+          headerTintColor: '#fff',
+          drawerItemStyle: { height: 0 }
+        }}
+      />
+      <Drawer.Screen 
+        name="ApplicationDetails"
+        component={ApplicationDetails}
+        options={{
+          headerShown: true,
+          title: 'Application Details',
+          headerStyle: { backgroundColor: '#1dbf73' },
+          headerTintColor: '#fff',
+          drawerItemStyle: { height: 0 }
         }}
       />
     </Drawer.Navigator>

@@ -161,7 +161,7 @@ class NotificationService {
     }
 
     this.messageSubscription = Notifications.addNotificationReceivedListener(async (notification) => {
-      console.log('[Notification] Received:', notification);
+      // console.log('[Notification] Received:', notification);
       
       // Store the notification
       const storedNotification: StoredNotification = {

@@ -18,16 +18,17 @@ export const registerUser = createAsyncThunk(
     async (userData: Omit<User, 'id' | 'loginId'>, { rejectWithValue }) => {
         try {
 
-      
+            // console.log(userData)
             const response = await api.post('/user/register', userData);
            
             
-          
+            // console.log('Register response:', response.data);
             
-            const { user } = response.data?.data;
+            const user = response.data;
+            // console.log(user,"user")
 
 
-            await AsyncStorage.setItem('user', JSON.stringify(user));
+            await AsyncStorage.setItem('user', JSON.stringify(user?.data));
             return { user }; 
         } catch (error: any) {
             return rejectWithValue(error.response?.data?.message || 'Registration failed');
@@ -48,7 +49,7 @@ export const loginUser = createAsyncThunk(
         throw new Error('Invalid credentials');
       }
 
-        console.log()
+ 
 
       const updateUser = { ...user, password: userData?.password };
       await AsyncStorage.setItem('user', JSON.stringify(updateUser));
@@ -67,7 +68,7 @@ export const updateProfile = createAsyncThunk(
   'auth/updateProfile',
   async (profileData: Partial<User>, { getState, dispatch, rejectWithValue }) => {
 
-    console.log('updateProfile called with data:', profileData);
+    // console.log('updateProfile called with data:', profileData);
     try {
       const state: any = getState();
       const currentUser = state.auth.user;
@@ -171,8 +172,9 @@ const authSlice = createSlice({
                 state.error = null;
             })
             .addCase(registerUser.fulfilled, (state, action) => {
+         
                 state.isAuthenticated = true;
-                state.user = action.payload.user;
+                state.user = action.payload.user.data;
                 state.loading = false;
                 state.error = null;
             })
